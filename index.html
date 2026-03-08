@@ -540,9 +540,236 @@ body { padding: 12px 8px; }
   .reset-btn { font-size: 13px; padding: 7px 18px; }
   .resign-btn { font-size: 10px; padding: 3px 8px; }
 }
+
+/* ===== タイトル画面 ===== */
+.title-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 90vh;
+  gap: 24px;
+  padding: 20px;
+}
+
+.title-logo {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 16px;
+  color: #e8d5b0;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.5);
+}
+
+.title-sub {
+  font-size: 14px;
+  color: #a08050;
+  letter-spacing: 3px;
+  margin-top: -10px;
+}
+
+/* 名前入力 */
+.name-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.name-label {
+  font-size: 14px;
+  color: #c4a875;
+  min-width: 80px;
+  text-align: right;
+}
+.name-input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid #8B7355;
+  border-radius: 6px;
+  color: #e8d5b0;
+  outline: none;
+}
+.name-input:focus {
+  border-color: #c49a4a;
+  background: rgba(255,255,255,0.12);
+}
+.name-input::placeholder {
+  color: rgba(200,180,140,0.4);
+}
+
+/* 振り駒エリア */
+.furigoma-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(0,0,0,0.2);
+  border: 1.5px solid #5a4030;
+  border-radius: 10px;
+  min-width: 300px;
+}
+.furigoma-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #c4a875;
+  letter-spacing: 3px;
+}
+.furigoma-pieces {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.furi-koma {
+  width: 50px;
+  height: 56px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.45));
+  transition: transform 0.3s;
+}
+.furi-koma .koma-bg {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 8%, 10% 30%, 0% 100%, 100% 100%, 90% 30%);
+  background: linear-gradient(175deg, #8a6d3a 0%, #6b5028 100%);
+}
+.furi-koma .koma-bg::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px; right: 2px; bottom: 1px;
+  clip-path: polygon(50% 9%, 12% 31%, 2% 100%, 98% 100%, 88% 31%);
+  background: linear-gradient(175deg, #f0d48a 0%, #e6c36e 15%, #d4a84e 35%, #c89840 55%, #ba8735 75%, #a67328 100%);
+  box-shadow: inset 0 -4px 8px rgba(120,80,20,0.2), inset 0 2px 4px rgba(255,240,180,0.3);
+}
+.furi-koma .koma-text {
+  position: relative;
+  z-index: 2;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: #1a1408;
+  line-height: 1;
+  margin-top: 16px;
+  -webkit-text-stroke: 0.3px #2a1a08;
+}
+.furi-koma.tokin .koma-text {
+  color: #8b1a1a;
+  -webkit-text-stroke: 0.3px #5a0a0a;
+}
+
+/* 振り駒アニメーション */
+.furi-koma.shaking {
+  animation: furiShake 0.08s linear infinite;
+}
+@keyframes furiShake {
+  0% { transform: rotate(-8deg) translateY(-2px); }
+  25% { transform: rotate(8deg) translateY(2px); }
+  50% { transform: rotate(-6deg) translateY(-1px); }
+  75% { transform: rotate(6deg) translateY(1px); }
+  100% { transform: rotate(-8deg) translateY(-2px); }
+}
+.furi-koma.landed {
+  animation: furiLand 0.3s ease-out forwards;
+}
+@keyframes furiLand {
+  0% { transform: translateY(-20px) scale(1.1); }
+  60% { transform: translateY(3px) scale(0.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.furigoma-result {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd700;
+  min-height: 24px;
+  text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+
+.furi-btn {
+  padding: 10px 36px;
+  background: linear-gradient(135deg, #6b4423, #8B5E3C);
+  color: #e8d5b0;
+  border: 2px solid #8B7355;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 2px;
+}
+.furi-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); transform: translateY(-1px); }
+.furi-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+.start-btn {
+  padding: 12px 48px;
+  background: linear-gradient(135deg, #8B5E3C, #a06e48);
+  color: #e8d5b0;
+  border: 2px solid #c49a4a;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 4px;
+  display: none;
+}
+.start-btn.show { display: inline-block; }
+.start-btn:hover { background: linear-gradient(135deg, #a06e48, #b88050); transform: translateY(-1px); }
+
+/* ゲーム画面は最初非表示 */
+.game-screen { display: none; }
+.game-screen.show { display: flex; flex-direction: column; align-items: center; }
 </style>
 </head>
 <body>
+
+<!-- ===== タイトル画面 ===== -->
+<div class="title-screen" id="title-screen">
+  <div class="title-logo">将 棋</div>
+  <div class="title-sub">— 二人対戦 —</div>
+
+  <div class="name-inputs">
+    <div class="name-row">
+      <span class="name-label">プレイヤー1</span>
+      <input class="name-input" id="name1" type="text" placeholder="名前を入力" maxlength="10">
+    </div>
+    <div class="name-row">
+      <span class="name-label">プレイヤー2</span>
+      <input class="name-input" id="name2" type="text" placeholder="名前を入力" maxlength="10">
+    </div>
+  </div>
+
+  <div class="furigoma-area">
+    <div class="furigoma-title">振り駒</div>
+    <div class="furigoma-pieces" id="furi-pieces">
+      <div class="furi-koma" id="fk0"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
+      <div class="furi-koma" id="fk1"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
+      <div class="furi-koma" id="fk2"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
+      <div class="furi-koma" id="fk3"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
+      <div class="furi-koma" id="fk4"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
+    </div>
+    <div class="furigoma-result" id="furi-result"></div>
+    <button class="furi-btn" id="furi-btn">振り駒</button>
+  </div>
+
+  <button class="start-btn" id="start-btn">対局開始</button>
+</div>
+
+<!-- ===== ゲーム画面 ===== -->
+<div class="game-screen" id="game-screen">
 
 <div id="game-over-banner"></div>
 
@@ -619,6 +846,8 @@ body { padding: 12px 8px; }
     <button class="win-ok-btn" id="win-ok">OK</button>
   </div>
 </div>
+
+</div><!-- /game-screen -->
 
 <script>
 (function(){
@@ -1213,13 +1442,6 @@ document.getElementById("rev-first").addEventListener("click",function(){ showRe
 document.getElementById("rev-prev").addEventListener("click",function(){ showReviewAt(reviewIdx-1); });
 document.getElementById("rev-next").addEventListener("click",function(){ showReviewAt(reviewIdx+1); });
 document.getElementById("rev-last").addEventListener("click",function(){ showReviewAt(snapshots.length-1); });
-document.getElementById("rev-exit").addEventListener("click",function(){
-  reviewMode=false;
-  document.querySelector(".board-area").classList.remove("review-mode");
-  document.getElementById("review-bar").classList.remove("show");
-  init();
-  render();
-});
 
 /* 投了 */
 function doResign(who){
@@ -1236,7 +1458,110 @@ document.getElementById("resign-gote").addEventListener("click",function(){ doRe
 
 /* 起動 */
 init();
-render();
+/* ゲーム画面は非表示のまま。タイトル画面が最初に表示される */
+
+/* ===== タイトル画面・振り駒 ===== */
+var furiResult = null; // {sente:"name", gote:"name"}
+var furiDone = false;
+
+document.getElementById("furi-btn").addEventListener("click", function(){
+  var btn = this;
+  btn.disabled = true;
+  furiDone = false;
+  document.getElementById("furi-result").textContent = "";
+  document.getElementById("start-btn").classList.remove("show");
+
+  // 5枚の駒を振る
+  var pieces = document.querySelectorAll(".furi-koma");
+  // シェイクアニメーション開始
+  for(var i=0; i<pieces.length; i++){
+    pieces[i].classList.remove("landed","tokin");
+    pieces[i].querySelector(".koma-text").textContent = "歩";
+    pieces[i].classList.add("shaking");
+  }
+
+  // 1秒後に結果決定
+  setTimeout(function(){
+    var tokinCount = 0;
+    var results = [];
+    for(var i=0; i<5; i++){
+      // 各駒50%の確率で歩/と金
+      var isTokin = Math.random() < 0.5;
+      results.push(isTokin);
+      if(isTokin) tokinCount++;
+    }
+
+    // 順次着地アニメーション
+    for(var i=0; i<5; i++){
+      (function(idx, isTokin){
+        setTimeout(function(){
+          var koma = pieces[idx];
+          koma.classList.remove("shaking");
+          koma.classList.add("landed");
+          if(isTokin){
+            koma.classList.add("tokin");
+            koma.querySelector(".koma-text").textContent = "と";
+          }
+
+          // 最後の駒が着地したら結果表示
+          if(idx === 4){
+            setTimeout(function(){
+              var name1 = document.getElementById("name1").value.trim() || "プレイヤー1";
+              var name2 = document.getElementById("name2").value.trim() || "プレイヤー2";
+              var resultEl = document.getElementById("furi-result");
+
+              // 公式ルール準拠：と金が多い(3枚以上)→振った側(プレイヤー1)が先手
+              // 歩が多い(3枚以上)→プレイヤー2が先手
+              // 5枚とも同じ → 振り直し（ここでは自動で振り直し扱いにせず結果表示）
+              if(tokinCount >= 3){
+                furiResult = {sente: name1, gote: name2};
+                resultEl.textContent = "と金" + tokinCount + "枚 → " + name1 + " が先手！";
+              } else {
+                furiResult = {sente: name2, gote: name1};
+                resultEl.textContent = "歩" + (5 - tokinCount) + "枚 → " + name2 + " が先手！";
+              }
+              furiDone = true;
+              document.getElementById("start-btn").classList.add("show");
+              btn.disabled = false;
+            }, 200);
+          }
+        }, idx * 150);
+      })(i, results[i]);
+    }
+  }, 1000);
+});
+
+document.getElementById("start-btn").addEventListener("click", function(){
+  if(!furiResult) return;
+  // ゲーム画面に名前を反映
+  document.getElementById("si").textContent = "☗ " + furiResult.sente;
+  document.getElementById("gi").textContent = "☖ " + furiResult.gote;
+  // 画面切り替え
+  document.getElementById("title-screen").style.display = "none";
+  document.getElementById("game-screen").classList.add("show");
+  init();
+  render();
+});
+
+/* 検討モードの「新規対局」→タイトル画面に戻る */
+document.getElementById("rev-exit").addEventListener("click", function(){
+  reviewMode = false;
+  document.querySelector(".board-area").classList.remove("review-mode");
+  document.getElementById("review-bar").classList.remove("show");
+  document.getElementById("game-screen").classList.remove("show");
+  document.getElementById("title-screen").style.display = "flex";
+  // 振り駒リセット
+  furiDone = false;
+  furiResult = null;
+  document.getElementById("furi-result").textContent = "";
+  document.getElementById("start-btn").classList.remove("show");
+  var pieces = document.querySelectorAll(".furi-koma");
+  for(var i=0; i<pieces.length; i++){
+    pieces[i].classList.remove("landed","tokin","shaking");
+    pieces[i].querySelector(".koma-text").textContent = "歩";
+  }
+});
+
 window.addEventListener("resize", syncRowWidth);
 
 })();
