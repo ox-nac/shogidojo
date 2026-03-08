@@ -68,6 +68,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   min-height: 56px;
+  flex: 1;
 }
 .gote-row .hand-area { flex-direction: row-reverse; }
 .hand-empty { font-size: 13px; opacity: 0.4; }
@@ -788,6 +789,14 @@ function render(){
   else{$gi.classList.add("on");$si.classList.remove("on");}
   renderTimers();
   renderBanners();
+  syncRowWidth();
+}
+
+function syncRowWidth(){
+  var tbl=document.getElementById("tbl");
+  var w=tbl.offsetWidth+"px";
+  document.querySelector(".gote-row").style.width=w;
+  document.querySelector(".sente-row").style.width=w;
 }
 
 function renderBanners(){
@@ -1030,6 +1039,7 @@ document.getElementById("resign-gote").addEventListener("click",function(){ doRe
 /* 起動 */
 init();
 render();
+window.addEventListener("resize", syncRowWidth);
 
 })();
 </script>
