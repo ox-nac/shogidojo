@@ -947,7 +947,7 @@ function endT(){
   playKomaSound();
   var nx=T==="sente"?"gote":"sente";T=nx;
   chk=ich(B,nx);
-  if(chk) setTimeout(playOuteSound, 100);
+  if(chk) setTimeout(playOuteSound, 0);
   chkEnd(nx);
   render();
   if(!over && !timerInterval) startTimer();
