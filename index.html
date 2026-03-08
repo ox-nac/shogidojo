@@ -20,14 +20,6 @@ body {
   user-select: none;
 }
 
-/* バナー */
-#game-over-banner {
-  display: none;
-  font-size: 26px;
-  font-weight: bold;
-  color: #ffd700;
-  margin-bottom: 10px;
-}
 /* レイアウト */
 .board-area {
   display: flex;
@@ -235,7 +227,7 @@ body {
   width: 52px; text-align: center;
   font-size: 13px; font-weight: bold; color: #a08050;
 }
-.board-body { display: flex; align-items: stretch; }
+.board-body { display: flex; align-items: stretch; position: relative; }
 .row-labels { display: flex; flex-direction: column; margin-left: 3px; }
 .row-labels span {
   height: 52px;
@@ -776,8 +768,6 @@ body { padding: 12px 8px; }
 <!-- ===== ゲーム画面 ===== -->
 <div class="game-screen" id="game-screen">
 
-<div id="game-over-banner"></div>
-
 <div class="board-area">
 
   <!-- 後手（上・逆さま） -->
@@ -909,6 +899,19 @@ var bgm = new Audio("bgm.mp3");
 bgm.loop = true;
 bgm.volume = 0.3;
 var bgmStarted = false;
+var bgmUnlocked = false;
+
+/* iOS/iPad Safari対策: 最初のタッチでAudio再生をアンロック */
+function unlockBGM(){
+  if(bgmUnlocked) return;
+  bgm.play().then(function(){
+    bgm.pause();
+    bgm.currentTime = 0;
+    bgmUnlocked = true;
+  }).catch(function(){});
+}
+document.addEventListener("touchstart", unlockBGM, {once: false});
+document.addEventListener("click", unlockBGM, {once: false});
 
 function startBGM(){
   if(!bgmStarted){
@@ -1058,6 +1061,7 @@ function init(){
   if(ba) ba.classList.remove("review-mode");
   var rb=document.getElementById("review-bar");
   if(rb) rb.classList.remove("show");
+
 }
 
 /* タイマー */
@@ -1077,10 +1081,12 @@ function startTimer(){
       timerSente--;
       if(timerSente<=0){
         timerSente=0;
-        over="後手の勝ち（時間切れ）";
+        var gn=document.getElementById("gi").textContent.replace("☖ ","");
+        over=gn+" の勝ち";
         clearInterval(timerInterval);
         timerInterval=null;
         renderTimers();renderBanners();
+
         showWinDialog("gote");
         return;
       }
@@ -1088,10 +1094,12 @@ function startTimer(){
       timerGote--;
       if(timerGote<=0){
         timerGote=0;
-        over="先手の勝ち（時間切れ）";
+        var sn=document.getElementById("si").textContent.replace("☗ ","");
+        over=sn+" の勝ち";
         clearInterval(timerInterval);
         timerInterval=null;
         renderTimers();renderBanners();
+
         showWinDialog("sente");
         return;
       }
@@ -1125,7 +1133,6 @@ var $sh=document.getElementById("sh");
 var $gh=document.getElementById("gh");
 var $si=document.getElementById("si");
 var $gi=document.getElementById("gi");
-var $ob=document.getElementById("game-over-banner");
 var $ov=document.getElementById("ov");
 
 function render(){
@@ -1152,8 +1159,6 @@ function syncRowWidth(){
 }
 
 function renderBanners(){
-  $ob.style.display=over?"block":"none";
-  $ob.textContent=over||"";
   if(prm){
     $ov.classList.add("show");
     $ov.classList.toggle("gote-turn", T==="gote");
@@ -1342,8 +1347,10 @@ function chkEnd(tn){
   }
   if(!found){
     var winner = tn==="sente" ? "gote" : "sente";
-    over=chk?(tn==="sente"?"後手":"先手")+"の勝ち（詰み）":"引き分け";
+    var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
+    over = chk ? winnerName + " の勝ち" : "引き分け";
     if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+
     if(chk) setTimeout(function(){ showWinDialog(winner); }, 300);
   }
 }
@@ -1451,10 +1458,11 @@ document.getElementById("rev-last").addEventListener("click",function(){ showRev
 /* 投了 */
 function doResign(who){
   if(over) return;
-  // who が投了 → 相手の勝ち
   var winner = who==="sente" ? "gote" : "sente";
-  over = (who==="sente" ? "後手" : "先手") + "の勝ち（投了）";
+  var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
+  over = winnerName + " の勝ち";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+
   render();
   showWinDialog(winner);
 }
@@ -1546,6 +1554,8 @@ document.getElementById("start-btn").addEventListener("click", function(){
   document.getElementById("game-screen").classList.add("show");
   init();
   render();
+  // ユーザータップの中でBGMを直接再生（iPad対策）
+  bgm.play().then(function(){ bgmStarted = true; }).catch(function(){});
 });
 
 /* 検討モードの「新規対局」→タイトル画面に戻る */
