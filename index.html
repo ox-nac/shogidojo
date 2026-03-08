@@ -36,14 +36,6 @@ h1 {
   color: #ffd700;
   margin-bottom: 10px;
 }
-#check-banner {
-  display: none;
-  font-size: 18px;
-  font-weight: bold;
-  color: #ff4444;
-  margin-bottom: 6px;
-}
-
 /* レイアウト */
 .board-area {
   display: flex;
@@ -390,7 +382,6 @@ table.board td.cap::after {
 
 <h1>将 棋</h1>
 <div id="game-over-banner"></div>
-<div id="check-banner">王手！</div>
 
 <div class="board-area">
 
@@ -481,6 +472,13 @@ var komaSound = new Audio("shogikoma.mp3");
 function playKomaSound(){
   komaSound.currentTime = 0;
   komaSound.play().catch(function(){});
+}
+
+/* 王手音 */
+var outeSound = new Audio("oute.mp3");
+function playOuteSound(){
+  outeSound.currentTime = 0;
+  outeSound.play().catch(function(){});
 }
 
 /* 警告トースト */
@@ -658,7 +656,6 @@ var $gh=document.getElementById("gh");
 var $si=document.getElementById("si");
 var $gi=document.getElementById("gi");
 var $ob=document.getElementById("game-over-banner");
-var $cb=document.getElementById("check-banner");
 var $ov=document.getElementById("ov");
 
 function render(){
@@ -674,7 +671,6 @@ function render(){
 function renderBanners(){
   $ob.style.display=over?"block":"none";
   $ob.textContent=over||"";
-  $cb.style.display=(chk&&!over)?"block":"none";
   if(prm){
     $ov.classList.add("show");
     $ov.classList.toggle("gote-turn", T==="gote");
@@ -837,6 +833,7 @@ function endT(){
   playKomaSound();
   var nx=T==="sente"?"gote":"sente";T=nx;
   chk=ich(B,nx);
+  if(chk) setTimeout(playOuteSound, 250);
   chkEnd(nx);
   render();
   if(!over && !timerInterval) startTimer();
