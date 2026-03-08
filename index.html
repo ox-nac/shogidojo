@@ -592,7 +592,7 @@ body { padding: 12px 8px; }
     <span class="review-info" id="rev-info">0 / 0</span>
     <button class="review-btn" id="rev-next">▶</button>
     <button class="review-btn" id="rev-last">⏭</button>
-    <button class="review-exit-btn" id="rev-exit">対局に戻る</button>
+    <button class="review-exit-btn" id="rev-exit">新規対局</button>
   </div>
 
 </div>
@@ -668,6 +668,25 @@ var winSound = new Audio("shorisengen.mp3");
 function playWinSound(){
   winSound.currentTime = 0;
   winSound.play().catch(function(){});
+}
+
+/* BGM */
+var bgm = new Audio("bgm.mp3");
+bgm.loop = true;
+bgm.volume = 0.3;
+var bgmStarted = false;
+
+function startBGM(){
+  if(!bgmStarted){
+    bgm.currentTime = 0;
+    bgm.play().catch(function(){});
+    bgmStarted = true;
+  }
+}
+function stopBGM(){
+  bgm.pause();
+  bgm.currentTime = 0;
+  bgmStarted = false;
 }
 
 /* 警告トースト */
@@ -796,6 +815,7 @@ function init(){
   timerGote=TIMER_TOTAL;
   if(timerInterval) clearInterval(timerInterval);
   timerInterval=null;
+  stopBGM();
   snapshots=[];
   takeSnapshot(); // 初期局面を保存
   reviewMode=false;
@@ -816,6 +836,7 @@ function formatTime(sec){
 function startTimer(){
   if(timerInterval) clearInterval(timerInterval);
   if(over) return;
+  startBGM();
   timerInterval=setInterval(function(){
     if(over||prm) return;
     if(T==="sente"){
@@ -1102,6 +1123,7 @@ var $winOv=document.getElementById("win-ov");
 var $winText=document.getElementById("win-text");
 
 function showWinDialog(winner){
+  stopBGM();
   $winText.textContent="あなたの勝ちです";
   if(winner==="gote"){
     $winOv.classList.add("gote-win");
