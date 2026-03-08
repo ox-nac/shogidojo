@@ -287,15 +287,16 @@ table.board td.cap::after {
 
 /* 投了ボタン */
 .resign-btn {
-  padding: 9px 26px;
+  padding: 4px 12px;
   background: linear-gradient(135deg, #5a1a1a, #7a2a2a);
   color: #e8d5b0;
-  border: 2px solid #8B4040;
-  border-radius: 7px;
-  font-size: 15px;
+  border: 1.5px solid #8B4040;
+  border-radius: 5px;
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  flex-shrink: 0;
 }
 .resign-btn:hover { background: linear-gradient(135deg, #7a2a2a, #943535); }
 
@@ -438,7 +439,7 @@ table.board td { width: 75px; height: 75px; }
 .hand-count { width: 20px; height: 20px; font-size: 13px; }
 .hand-empty { font-size: 16px; }
 .reset-btn { font-size: 16px; padding: 10px 28px; }
-.resign-btn { font-size: 16px; padding: 10px 28px; }
+.resign-btn { font-size: 13px; padding: 5px 14px; }
 .warning-text { font-size: 20px; }
 .warning-icon { font-size: 34px; }
 .dialog p { font-size: 24px; }
@@ -472,7 +473,7 @@ body { padding: 12px 8px; }
   .hand-count { width: 15px; height: 15px; font-size: 10px; }
   .hand-empty { font-size: 12px; }
   .reset-btn { font-size: 13px; padding: 7px 18px; }
-  .resign-btn { font-size: 13px; padding: 7px 18px; }
+  .resign-btn { font-size: 10px; padding: 3px 8px; }
 }
 </style>
 </head>
@@ -585,6 +586,13 @@ var outeSound = new Audio("oute.mp3");
 function playOuteSound(){
   outeSound.currentTime = 0;
   outeSound.play().catch(function(){});
+}
+
+/* 勝利音 */
+var winSound = new Audio("shorisengen.mp3");
+function playWinSound(){
+  winSound.currentTime = 0;
+  winSound.play().catch(function(){});
 }
 
 /* 警告トースト */
@@ -947,7 +955,7 @@ function endT(){
   playKomaSound();
   var nx=T==="sente"?"gote":"sente";T=nx;
   chk=ich(B,nx);
-  if(chk) setTimeout(playOuteSound, 0);
+  if(chk) setTimeout(playOuteSound, 100);
   chkEnd(nx);
   render();
   if(!over && !timerInterval) startTimer();
@@ -994,6 +1002,7 @@ function showWinDialog(winner){
     $winOv.classList.remove("gote-win");
   }
   $winOv.classList.add("show");
+  playWinSound();
 }
 function hideWinDialog(){
   $winOv.classList.remove("show");
