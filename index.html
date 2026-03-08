@@ -40,9 +40,9 @@ body {
 .player-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 56px;
+  gap: 8px;
+  min-height: 50px;
+  max-width: 100%;
 }
 .player-row.gote-row {
   flex-direction: row-reverse;
@@ -793,10 +793,15 @@ function render(){
 }
 
 function syncRowWidth(){
-  var tbl=document.getElementById("tbl");
-  var w=tbl.offsetWidth+"px";
-  document.querySelector(".gote-row").style.width=w;
-  document.querySelector(".sente-row").style.width=w;
+  requestAnimationFrame(function(){
+    var tbl=document.getElementById("tbl");
+    if(!tbl) return;
+    var w=tbl.offsetWidth;
+    if(w>0){
+      document.querySelector(".gote-row").style.width=w+"px";
+      document.querySelector(".sente-row").style.width=w+"px";
+    }
+  });
 }
 
 function renderBanners(){
