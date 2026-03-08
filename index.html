@@ -20,14 +20,6 @@ body {
   user-select: none;
 }
 
-h1 {
-  font-size: 34px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  letter-spacing: 10px;
-  color: #e8d5b0;
-}
-
 /* バナー */
 #game-over-banner {
   display: none;
@@ -85,12 +77,12 @@ h1 {
 .timer-box {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 3px 10px;
   background: rgba(0,0,0,0.35);
   border: 1.5px solid #5a4030;
-  border-radius: 6px;
-  min-width: 110px;
+  border-radius: 5px;
+  min-width: 85px;
   justify-content: center;
   flex-shrink: 0;
 }
@@ -103,11 +95,11 @@ h1 {
   background: rgba(120,30,20,0.3);
 }
 .timer-icon {
-  font-size: 16px;
+  font-size: 13px;
   opacity: 0.7;
 }
 .timer-time {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
@@ -292,6 +284,70 @@ table.board td.cap::after {
 }
 .reset-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); }
 
+/* 投了ボタン */
+.resign-btn {
+  padding: 9px 26px;
+  background: linear-gradient(135deg, #5a1a1a, #7a2a2a);
+  color: #e8d5b0;
+  border: 2px solid #8B4040;
+  border-radius: 7px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+}
+.resign-btn:hover { background: linear-gradient(135deg, #7a2a2a, #943535); }
+
+/* ボタン行 */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+/* 勝ちダイアログ */
+.win-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.win-overlay.show { display: flex; }
+.win-dialog {
+  background: linear-gradient(135deg, #3d2e1f, #2a1f14);
+  border: 2px solid #c49a4a;
+  border-radius: 12px;
+  padding: 30px 44px;
+  text-align: center;
+  box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+  transition: transform 0.15s;
+}
+.win-overlay.gote-win .win-dialog {
+  transform: rotate(180deg);
+}
+.win-text {
+  font-size: 26px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 20px;
+  text-shadow: 0 0 15px rgba(255,215,0,0.3);
+}
+.win-ok-btn {
+  padding: 10px 36px;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Yu Mincho", serif;
+  background: linear-gradient(135deg, #6b4423, #8B5E3C);
+  color: #e8d5b0;
+  border: 2px solid #8B7355;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.win-ok-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); }
+
 /* 成りダイアログ */
 .overlay {
   display: none; position: fixed; inset: 0;
@@ -374,20 +430,20 @@ table.board td { width: 75px; height: 75px; }
 .hand-koma .koma-text { font-size: 30px; margin-top: 16px; }
 .col-labels span { width: 75px; font-size: 16px; }
 .row-labels span { height: 75px; font-size: 16px; width: 24px; }
-h1 { font-size: 40px; }
-.turn-label { font-size: 20px; padding: 6px 20px; }
-.timer-time { font-size: 28px; }
-.timer-icon { font-size: 20px; }
-.timer-box { padding: 8px 18px; min-width: 130px; }
+.turn-label { font-size: 18px; padding: 5px 16px; }
+.timer-time { font-size: 20px; }
+.timer-icon { font-size: 14px; }
+.timer-box { padding: 4px 12px; min-width: 95px; }
 .hand-count { width: 20px; height: 20px; font-size: 13px; }
 .hand-empty { font-size: 16px; }
-.reset-btn { font-size: 18px; padding: 12px 32px; }
+.reset-btn { font-size: 16px; padding: 10px 28px; }
+.resign-btn { font-size: 16px; padding: 10px 28px; }
 .warning-text { font-size: 20px; }
 .warning-icon { font-size: 34px; }
 .dialog p { font-size: 24px; }
 .dialog button { font-size: 22px; padding: 14px 38px; }
 table.board { border: 4px solid #6b4423; }
-body { padding: 16px 8px; }
+body { padding: 12px 8px; }
 
 /* PC・大画面 */
 @media (min-width: 1100px) {
@@ -398,12 +454,10 @@ body { padding: 16px 8px; }
   .hand-koma .koma-text { font-size: 26px; margin-top: 14px; }
   .col-labels span { width: 64px; font-size: 15px; }
   .row-labels span { height: 64px; font-size: 15px; }
-  h1 { font-size: 36px; }
 }
 
 /* スマホ */
 @media (max-width: 600px) {
-  h1 { font-size: 24px; letter-spacing: 5px; }
   table.board td { width: 40px; height: 40px; }
   .koma { width: 32px; height: 36px; }
   .koma-text { font-size: 17px; margin-top: 10px; }
@@ -411,18 +465,18 @@ body { padding: 16px 8px; }
   .hand-koma .koma-text { font-size: 15px; margin-top: 9px; }
   .col-labels span { width: 40px; font-size: 10px; }
   .row-labels span { height: 40px; font-size: 10px; }
-  .timer-time { font-size: 18px; }
-  .timer-box { min-width: 90px; padding: 4px 10px; }
-  .turn-label { font-size: 14px; padding: 3px 12px; }
+  .timer-time { font-size: 15px; }
+  .timer-box { min-width: 70px; padding: 3px 8px; }
+  .turn-label { font-size: 13px; padding: 3px 10px; }
   .hand-count { width: 15px; height: 15px; font-size: 10px; }
   .hand-empty { font-size: 12px; }
-  .reset-btn { font-size: 14px; padding: 8px 20px; }
+  .reset-btn { font-size: 13px; padding: 7px 18px; }
+  .resign-btn { font-size: 13px; padding: 7px 18px; }
 }
 </style>
 </head>
 <body>
 
-<h1>将 棋</h1>
 <div id="game-over-banner"></div>
 
 <div class="board-area">
@@ -462,7 +516,10 @@ body { padding: 16px 8px; }
     <div id="sh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
   </div>
 
-  <button class="reset-btn" id="rbtn">新しい対局</button>
+  <div class="btn-row">
+    <button class="reset-btn" id="rbtn">新しい対局</button>
+    <button class="resign-btn" id="resign-btn">投了</button>
+  </div>
 </div>
 
 <!-- 成りダイアログ -->
@@ -478,6 +535,14 @@ body { padding: 16px 8px; }
 <div class="warning-toast" id="warn">
   <div class="warning-icon">⚠</div>
   <div class="warning-text" id="warn-text"></div>
+</div>
+
+<!-- 勝ちダイアログ -->
+<div class="win-overlay" id="win-ov">
+  <div class="win-dialog">
+    <div class="win-text" id="win-text"></div>
+    <button class="win-ok-btn" id="win-ok">OK</button>
+  </div>
 </div>
 
 <script>
@@ -659,6 +724,10 @@ function startTimer(){
         timerSente=0;
         over="後手の勝ち（時間切れ）";
         clearInterval(timerInterval);
+        timerInterval=null;
+        renderTimers();renderBanners();
+        showWinDialog("gote");
+        return;
       }
     } else {
       timerGote--;
@@ -666,6 +735,10 @@ function startTimer(){
         timerGote=0;
         over="先手の勝ち（時間切れ）";
         clearInterval(timerInterval);
+        timerInterval=null;
+        renderTimers();renderBanners();
+        showWinDialog("sente");
+        return;
       }
     }
     renderTimers();
@@ -899,15 +972,52 @@ function chkEnd(tn){
     }
   }
   if(!found){
+    var winner = tn==="sente" ? "gote" : "sente";
     over=chk?(tn==="sente"?"後手":"先手")+"の勝ち（詰み）":"引き分け";
     if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+    if(chk) setTimeout(function(){ showWinDialog(winner); }, 300);
   }
 }
 
 /* ダイアログ */
 document.getElementById("py").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,true);});
 document.getElementById("pn").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,false);});
-document.getElementById("rbtn").addEventListener("click",function(){init();render();});
+document.getElementById("rbtn").addEventListener("click",function(){
+  hideWinDialog();
+  init();render();
+});
+
+/* 勝ちダイアログ */
+var $winOv=document.getElementById("win-ov");
+var $winText=document.getElementById("win-text");
+
+function showWinDialog(winner){
+  // winner: "sente" or "gote"
+  $winText.textContent="あなたの勝ちです";
+  // 勝者側の向きに表示
+  if(winner==="gote"){
+    $winOv.classList.add("gote-win");
+  } else {
+    $winOv.classList.remove("gote-win");
+  }
+  $winOv.classList.add("show");
+}
+function hideWinDialog(){
+  $winOv.classList.remove("show");
+  $winOv.classList.remove("gote-win");
+}
+document.getElementById("win-ok").addEventListener("click",function(){ hideWinDialog(); });
+
+/* 投了 */
+document.getElementById("resign-btn").addEventListener("click",function(){
+  if(over) return;
+  // 現在の手番が投了 → 相手の勝ち
+  var winner = T==="sente" ? "gote" : "sente";
+  over = (T==="sente" ? "後手" : "先手") + "の勝ち（投了）";
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  render();
+  showWinDialog(winner);
+});
 
 /* 起動 */
 init();
