@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>将棋 - Shogi Game</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  min-height: 100vh;
+  background: #1e1810;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  padding: 20px 12px;
+  color: #e8d5b0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h1 {
+  font-size: 34px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  letter-spacing: 10px;
+  color: #e8d5b0;
+}
+
+/* バナー */
+#game-over-banner {
+  display: none;
+  font-size: 26px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 10px;
+}
+#check-banner {
+  display: none;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff4444;
+  margin-bottom: 6px;
+}
+
+/* レイアウト */
+.board-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* プレイヤー行 */
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+}
+.player-row.gote-row {
+  flex-direction: row-reverse;
+}
+
+.turn-label {
+  font-size: 16px;
+  font-weight: bold;
+  padding: 4px 16px;
+  border-radius: 5px;
+  background: rgba(80,50,25,0.5);
+  border: 1px solid rgba(139,115,85,0.4);
+  opacity: 0.35;
+  white-space: nowrap;
+}
+.turn-label.on { opacity: 1; border-color: #8B7355; }
+.gote-row .turn-label { transform: rotate(180deg); }
+
+/* 持ち駒エリア */
+.hand-area {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 56px;
+}
+.gote-row .hand-area { flex-direction: row-reverse; }
+.hand-empty { font-size: 13px; opacity: 0.4; }
+.gote-row .hand-empty { transform: rotate(180deg); }
+
+/* ===== タイマー ===== */
+.timer-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(0,0,0,0.35);
+  border: 1.5px solid #5a4030;
+  border-radius: 6px;
+  min-width: 110px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.timer-box.active {
+  border-color: #c49a4a;
+  background: rgba(80,50,20,0.5);
+}
+.timer-box.danger {
+  border-color: #c0392b;
+  background: rgba(120,30,20,0.3);
+}
+.timer-icon {
+  font-size: 16px;
+  opacity: 0.7;
+}
+.timer-time {
+  font-size: 22px;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  color: #e8d5b0;
+  font-family: "Courier New", "Consolas", monospace;
+}
+.timer-box.danger .timer-time {
+  color: #e74c3c;
+}
+.gote-row .timer-box {
+  transform: rotate(180deg);
+}
+
+/* ===== 五角形駒（参考画像準拠） ===== */
+.koma {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.45));
+}
+
+/* 外側の五角形（枠線の役割）
+   頂点(上中央) → 左肩(上の角) → 左下 → 右下 → 右肩
+   肩は底辺より内側（狭い）= 上に向かってスリムに */
+.koma-bg {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 8%, 10% 30%, 0% 100%, 100% 100%, 90% 30%);
+  background: linear-gradient(175deg, #8a6d3a 0%, #6b5028 100%);
+}
+
+/* 内側の五角形（木目グラデーション） */
+.koma-bg::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px; right: 2px; bottom: 1px;
+  clip-path: polygon(50% 9%, 12% 31%, 2% 100%, 98% 100%, 88% 31%);
+  background:
+    linear-gradient(175deg,
+      #f0d48a 0%,
+      #e6c36e 15%,
+      #d4a84e 35%,
+      #c89840 55%,
+      #ba8735 75%,
+      #a67328 100%
+    );
+  box-shadow: inset 0 -4px 8px rgba(120,80,20,0.2),
+              inset 0 2px 4px rgba(255,240,180,0.3);
+}
+
+/* 駒の文字 */
+.koma-text {
+  position: relative;
+  z-index: 2;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: #1a1408;
+  line-height: 1;
+  margin-top: 14px;
+  text-shadow: 0 0.5px 0 rgba(180,150,80,0.3);
+  /* 筆文字風のレタリング */
+  -webkit-text-stroke: 0.3px #2a1a08;
+}
+
+.koma.promoted .koma-text {
+  color: #8b1a1a;
+  -webkit-text-stroke: 0.3px #5a0a0a;
+}
+.koma.gote { transform: translate(-50%, -50%) rotate(180deg); }
+
+/* ===== 持ち駒 ===== */
+.hand-koma {
+  position: relative;
+  width: 42px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.4));
+}
+.hand-koma:hover { transform: scale(1.08); }
+.hand-koma.gote-hk { transform: rotate(180deg); }
+.hand-koma.gote-hk:hover { transform: rotate(180deg) scale(1.08); }
+
+/* 選択時は少し明るく */
+.hand-koma.sel .koma-bg::after {
+  background:
+    linear-gradient(175deg,
+      #f8e0a0 0%,
+      #f0d080 15%,
+      #e0b860 35%,
+      #d4a850 55%,
+      #c89840 75%,
+      #b88830 100%
+    );
+}
+
+.hand-count {
+  position: absolute;
+  bottom: -2px; right: -4px;
+  font-size: 11px; font-weight: bold; color: #fff;
+  background: #5a3818; border-radius: 50%;
+  width: 17px; height: 17px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5; pointer-events: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.hand-koma.gote-hk .hand-count {
+  transform: rotate(180deg);
+  bottom: auto; top: -2px;
+}
+
+/* 盤 */
+.board-frame {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.col-labels { display: flex; margin-bottom: 1px; }
+.col-labels span {
+  width: 52px; text-align: center;
+  font-size: 13px; font-weight: bold; color: #a08050;
+}
+.board-body { display: flex; align-items: stretch; }
+.row-labels { display: flex; flex-direction: column; margin-left: 3px; }
+.row-labels span {
+  height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: bold; color: #a08050; width: 20px;
+}
+
+table.board {
+  border-collapse: collapse;
+  border: 3px solid #6b4423;
+  background-color: #DEB887;
+}
+table.board td {
+  width: 52px; height: 52px;
+  border: 1px solid #a08050;
+  text-align: center; vertical-align: middle;
+  cursor: pointer; position: relative;
+  padding: 0;
+  background-color: #DEB887;
+}
+table.board td:hover { background-color: #d4a867; }
+table.board td.sel { background-color: #c49a4a !important; }
+table.board td.mv::after {
+  content: ""; position: absolute;
+  top: 50%; left: 50%;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border-radius: 50%; background: rgba(56,130,50,0.55);
+  pointer-events: none; z-index: 3;
+}
+table.board td.cap { background-color: rgba(200,80,60,0.15) !important; }
+table.board td.cap::after {
+  content: ""; position: absolute;
+  top: 50%; left: 50%;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border-radius: 50%; background: rgba(200,60,40,0.5);
+  pointer-events: none; z-index: 3;
+}
+
+/* ボタン */
+.reset-btn {
+  padding: 9px 26px;
+  background: linear-gradient(135deg, #6b4423, #8B5E3C);
+  color: #e8d5b0; border: 2px solid #8B7355;
+  border-radius: 7px; font-size: 15px; font-weight: bold;
+  cursor: pointer;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  margin-top: 6px;
+}
+.reset-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); }
+
+/* 成りダイアログ */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  justify-content: center; align-items: center; z-index: 999;
+}
+.overlay.show { display: flex; }
+.dialog {
+  background: linear-gradient(135deg, #3d2e1f, #2a1f14);
+  border: 2px solid #8B7355; border-radius: 10px;
+  padding: 24px 36px; text-align: center;
+  box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+  transition: transform 0.15s;
+}
+.overlay.gote-turn .dialog {
+  transform: rotate(180deg);
+}
+.dialog p { font-size: 19px; font-weight: bold; margin-bottom: 18px; color: #e8d5b0; }
+.dialog button {
+  padding: 10px 30px; margin: 0 8px;
+  font-size: 17px; font-weight: bold;
+  font-family: "Yu Mincho", serif;
+  border: 2px solid #8B7355; border-radius: 7px; cursor: pointer;
+}
+.btn-y { background: #b22222; color: #fff; }
+.btn-y:hover { background: #d42a2a; }
+.btn-n { background: #4a3828; color: #e8d5b0; }
+.btn-n:hover { background: #5a4838; }
+
+/* 時間切れダイアログ */
+.time-up-banner {
+  display: none;
+  font-size: 26px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 10px;
+}
+
+/* 警告トースト */
+.warning-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(40, 25, 15, 0.95);
+  border: 2px solid #c0392b;
+  border-radius: 10px;
+  padding: 20px 32px;
+  text-align: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+.warning-toast.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+.warning-toast.gote-warn {
+  transform: translate(-50%, -50%) scale(1) rotate(180deg);
+}
+.warning-text {
+  font-size: 17px;
+  font-weight: bold;
+  color: #f0c0a0;
+  line-height: 1.5;
+}
+.warning-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 600px) {
+  h1 { font-size: 24px; letter-spacing: 5px; }
+  table.board td { width: 42px; height: 42px; }
+  .koma { width: 34px; height: 38px; }
+  .koma-text { font-size: 18px; margin-top: 5px; }
+  .hand-koma { width: 34px; height: 38px; }
+  .col-labels span { width: 42px; font-size: 10px; }
+  .row-labels span { height: 42px; font-size: 10px; }
+  .timer-time { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<h1>将 棋</h1>
+<div id="game-over-banner"></div>
+<div id="check-banner">王手！</div>
+
+<div class="board-area">
+
+  <!-- 後手（上・逆さま） -->
+  <div class="player-row gote-row">
+    <div id="gi" class="turn-label">☖ 後手</div>
+    <div id="gote-timer" class="timer-box">
+      <span class="timer-icon">⏱</span>
+      <span class="timer-time" id="gote-time">10:00</span>
+    </div>
+    <div id="gh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
+  </div>
+
+  <!-- 盤 -->
+  <div class="board-frame">
+    <div class="col-labels">
+      <span>9</span><span>8</span><span>7</span><span>6</span><span>5</span>
+      <span>4</span><span>3</span><span>2</span><span>1</span>
+    </div>
+    <div class="board-body">
+      <table class="board" id="tbl"><tbody id="tb"></tbody></table>
+      <div class="row-labels">
+        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span>
+        <span>六</span><span>七</span><span>八</span><span>九</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 先手（下・正位置） -->
+  <div class="player-row sente-row">
+    <div id="si" class="turn-label on">☗ 先手</div>
+    <div id="sente-timer" class="timer-box active">
+      <span class="timer-icon">⏱</span>
+      <span class="timer-time" id="sente-time">10:00</span>
+    </div>
+    <div id="sh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
+  </div>
+
+  <button class="reset-btn" id="rbtn">新しい対局</button>
+</div>
+
+<!-- 成りダイアログ -->
+<div class="overlay" id="ov">
+  <div class="dialog">
+    <p>成りますか？</p>
+    <button class="btn-y" id="py">成る</button>
+    <button class="btn-n" id="pn">不成</button>
+  </div>
+</div>
+
+<!-- 警告トースト -->
+<div class="warning-toast" id="warn">
+  <div class="warning-icon">⚠</div>
+  <div class="warning-text" id="warn-text"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var PN={
+  K:"王",k:"玉",R:"飛",r:"飛",B:"角",b:"角",
+  G:"金",g:"金",S:"銀",s:"銀",N:"桂",n:"桂",
+  L:"香",l:"香",P:"歩",p:"歩",
+  PR:"龍",pr:"龍",PB:"馬",pb:"馬",
+  PS:"全",ps:"全",PN:"圭",pn:"圭",
+  PL:"杏",pl:"杏",PP:"と",pp:"と"
+};
+var PRO={R:"PR",r:"pr",B:"PB",b:"pb",S:"PS",s:"ps",N:"PN",n:"pn",L:"PL",l:"pl",P:"PP",p:"pp"};
+var UNP={PR:"R",pr:"r",PB:"B",pb:"b",PS:"S",ps:"s",PN:"N",pn:"n",PL:"L",pl:"l",PP:"P",pp:"p"};
+var RL=["一","二","三","四","五","六","七","八","九"];
+var INIT=[
+  ["l","n","s","g","k","g","s","n","l"],
+  [null,"r",null,null,null,null,null,"b",null],
+  ["p","p","p","p","p","p","p","p","p"],
+  [null,null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null,null],
+  [null,null,null,null,null,null,null,null,null],
+  ["P","P","P","P","P","P","P","P","P"],
+  [null,"B",null,null,null,null,null,"R",null],
+  ["L","N","S","G","K","G","S","N","L"]
+];
+
+var TIMER_TOTAL = 10 * 60; // 10分（秒）
+
+/* 駒音 */
+var komaSound = new Audio("shogikoma.mp3");
+function playKomaSound(){
+  komaSound.currentTime = 0;
+  komaSound.play().catch(function(){});
+}
+
+/* 警告トースト */
+var $warn = document.getElementById("warn");
+var $warnText = document.getElementById("warn-text");
+var warnTimer = null;
+function showWarning(msg){
+  if(warnTimer) clearTimeout(warnTimer);
+  $warnText.textContent = msg;
+  // 後手の番なら逆さまに表示
+  if(T === "gote"){
+    $warn.classList.add("gote-warn");
+  } else {
+    $warn.classList.remove("gote-warn");
+  }
+  $warn.classList.add("show");
+  warnTimer = setTimeout(function(){
+    $warn.classList.remove("show");
+    $warn.classList.remove("gote-warn");
+  }, 1800);
+}
+
+function isS(p){return p!==null&&p===p.toUpperCase();}
+function isG(p){return p!==null&&p!==p.toUpperCase();}
+function isP(p){return p!==null&&p.length===2&&p[0].toLowerCase()==="p";}
+function dn(p){return p?(PN[p]||p):"";}
+function bp(p){return UNP[p]||p;}
+function cap(p){if(!p)return null;var b=UNP[p]||p;return isS(p)?b.toLowerCase():b.toUpperCase();}
+function cb(b){return b.map(function(r){return r.slice();});}
+
+function komaHTML(piece, isGotePiece){
+  var cls="koma";
+  if(isGotePiece) cls+=" gote";
+  if(isP(piece)) cls+=" promoted";
+  return '<div class="'+cls+'"><div class="koma-bg"></div><span class="koma-text">'+dn(piece)+'</span></div>';
+}
+
+function gm(pc,row,col,bd){
+  var mv=[],se=isS(pc),d=se?-1:1,b=bp(pc).toUpperCase(),pr=isP(pc);
+  function a(r,c){if(r<0||r>8||c<0||c>8)return false;var t=bd[r][c];if(t&&((se&&isS(t))||(!se&&isG(t))))return false;mv.push([r,c]);return!t;}
+  function ln(dr,dc){for(var i=1;i<=8;i++){if(!a(row+dr*i,col+dc*i))break;}}
+  if(pr&&b!=="R"&&b!=="B"){a(row+d,col-1);a(row+d,col);a(row+d,col+1);a(row,col-1);a(row,col+1);a(row-d,col);return mv;}
+  switch(b){
+    case"K":for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++)if(dr||dc)a(row+dr,col+dc);break;
+    case"R":ln(-1,0);ln(1,0);ln(0,-1);ln(0,1);if(pr){a(row-1,col-1);a(row-1,col+1);a(row+1,col-1);a(row+1,col+1);}break;
+    case"B":ln(-1,-1);ln(-1,1);ln(1,-1);ln(1,1);if(pr){a(row-1,col);a(row+1,col);a(row,col-1);a(row,col+1);}break;
+    case"G":a(row+d,col-1);a(row+d,col);a(row+d,col+1);a(row,col-1);a(row,col+1);a(row-d,col);break;
+    case"S":a(row+d,col-1);a(row+d,col);a(row+d,col+1);a(row-d,col-1);a(row-d,col+1);break;
+    case"N":a(row+d*2,col-1);a(row+d*2,col+1);break;
+    case"L":ln(d,0);break;
+    case"P":a(row+d,col);break;
+  }
+  return mv;
+}
+function gd(pc,bd,tn){
+  var mv=[],b=pc.toUpperCase();
+  for(var r=0;r<9;r++){for(var c=0;c<9;c++){
+    if(bd[r][c])continue;
+    if(b==="P"){var dup=false;for(var rr=0;rr<9;rr++){var pp=bd[rr][c];if(pp&&bp(pp).toUpperCase()==="P"&&((tn==="sente"&&isS(pp))||(tn==="gote"&&isG(pp)))){dup=true;break;}}if(dup)continue;}
+    if((b==="P"||b==="L")&&((tn==="sente"&&r===0)||(tn==="gote"&&r===8)))continue;
+    if(b==="N"&&((tn==="sente"&&r<=1)||(tn==="gote"&&r>=7)))continue;
+    mv.push([r,c]);
+  }}
+  return mv;
+}
+function cpr(pc,fr,tr){
+  if(!pc||isP(pc))return false;var b=bp(pc).toUpperCase();
+  if(b==="K"||b==="G")return false;if(!PRO[pc])return false;
+  return isS(pc)?(fr<=2||tr<=2):(fr>=6||tr>=6);
+}
+function mpr(pc,tr){
+  if(!pc)return false;var b=bp(pc).toUpperCase();
+  if(isS(pc)){if((b==="P"||b==="L")&&tr===0)return true;if(b==="N"&&tr<=1)return true;}
+  else{if((b==="P"||b==="L")&&tr===8)return true;if(b==="N"&&tr>=7)return true;}
+  return false;
+}
+function ich(bd,tn){
+  var kg=tn==="sente"?"K":"k",kr=-1,kc=-1;
+  for(var r=0;r<9;r++)for(var c=0;c<9;c++)if(bd[r][c]===kg){kr=r;kc=c;}
+  if(kr<0)return false;
+  for(var r=0;r<9;r++)for(var c=0;c<9;c++){
+    var p=bd[r][c];if(!p)continue;
+    if(tn==="sente"&&isS(p))continue;if(tn==="gote"&&isG(p))continue;
+    var ms=gm(p,r,c,bd);for(var i=0;i<ms.length;i++)if(ms[i][0]===kr&&ms[i][1]===kc)return true;
+  }
+  return false;
+}
+function lm(bd,fr,fc,tr,tc,pc,tn,pr){
+  var nb=cb(bd);nb[tr][tc]=pr?PRO[pc]:pc;nb[fr][fc]=null;return!ich(nb,tn);
+}
+function ld(bd,pc,tr,tc,tn){
+  var nb=cb(bd);nb[tr][tc]=pc;
+  if(bp(pc).toUpperCase()==="P"){
+    var op=tn==="sente"?"gote":"sente";
+    if(ich(nb,op)){var ok=false;
+      for(var r=0;r<9&&!ok;r++)for(var c=0;c<9&&!ok;c++){
+        var pp=nb[r][c];if(!pp)continue;
+        if(op==="sente"&&!isS(pp))continue;if(op==="gote"&&!isG(pp))continue;
+        var ms=gm(pp,r,c,nb);
+        for(var i=0;i<ms.length;i++){var tb=cb(nb);tb[ms[i][0]][ms[i][1]]=pp;tb[r][c]=null;if(!ich(tb,op)){ok=true;break;}}
+      }
+      if(!ok)return false;
+    }
+  }
+  return!ich(nb,tn);
+}
+
+/* 状態 */
+var B,T,sel,mvs,H,prm,over,chk;
+var timerSente, timerGote, timerInterval;
+
+function init(){
+  B=INIT.map(function(r){return r.slice();});
+  T="sente";sel=null;mvs=[];H={sente:[],gote:[]};prm=null;over=null;chk=false;
+  timerSente=TIMER_TOTAL;
+  timerGote=TIMER_TOTAL;
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval=null;
+}
+
+/* タイマー */
+function formatTime(sec){
+  var m=Math.floor(sec/60);
+  var s=sec%60;
+  return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+}
+
+function startTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  if(over) return;
+  timerInterval=setInterval(function(){
+    if(over||prm) return;
+    if(T==="sente"){
+      timerSente--;
+      if(timerSente<=0){
+        timerSente=0;
+        over="後手の勝ち（時間切れ）";
+        clearInterval(timerInterval);
+      }
+    } else {
+      timerGote--;
+      if(timerGote<=0){
+        timerGote=0;
+        over="先手の勝ち（時間切れ）";
+        clearInterval(timerInterval);
+      }
+    }
+    renderTimers();
+    if(over) renderBanners();
+  }, 1000);
+}
+
+function renderTimers(){
+  var $st=document.getElementById("sente-time");
+  var $gt=document.getElementById("gote-time");
+  var $sb=document.getElementById("sente-timer");
+  var $gb=document.getElementById("gote-timer");
+
+  $st.textContent=formatTime(timerSente);
+  $gt.textContent=formatTime(timerGote);
+
+  // active
+  $sb.classList.toggle("active", T==="sente" && !over);
+  $gb.classList.toggle("active", T==="gote" && !over);
+
+  // danger (残り3分以下)
+  $sb.classList.toggle("danger", timerSente<=180);
+  $gb.classList.toggle("danger", timerGote<=180);
+}
+
+/* DOM */
+var $tb=document.getElementById("tb");
+var $sh=document.getElementById("sh");
+var $gh=document.getElementById("gh");
+var $si=document.getElementById("si");
+var $gi=document.getElementById("gi");
+var $ob=document.getElementById("game-over-banner");
+var $cb=document.getElementById("check-banner");
+var $ov=document.getElementById("ov");
+
+function render(){
+  drawBoard();
+  dh($sh,H.sente,"sente");
+  dh($gh,H.gote,"gote");
+  if(T==="sente"){$si.classList.add("on");$gi.classList.remove("on");}
+  else{$gi.classList.add("on");$si.classList.remove("on");}
+  renderTimers();
+  renderBanners();
+}
+
+function renderBanners(){
+  $ob.style.display=over?"block":"none";
+  $ob.textContent=over||"";
+  $cb.style.display=(chk&&!over)?"block":"none";
+  if(prm){
+    $ov.classList.add("show");
+    $ov.classList.toggle("gote-turn", T==="gote");
+  }else{
+    $ov.classList.remove("show");
+    $ov.classList.remove("gote-turn");
+  }
+}
+
+function drawBoard(){
+  var html="";
+  for(var r=0;r<9;r++){
+    html+="<tr>";
+    for(var c=0;c<9;c++){
+      var pc=B[r][c];
+      var cls="";
+      if(sel&&sel.t==="b"&&sel.r===r&&sel.c===c) cls+=" sel";
+      var isTgt=false;
+      for(var m=0;m<mvs.length;m++){if(mvs[m][0]===r&&mvs[m][1]===c){isTgt=true;break;}}
+      if(isTgt){cls+=pc?" cap":" mv";}
+      html+='<td class="'+cls.trim()+'" data-r="'+r+'" data-c="'+c+'">';
+      if(pc) html+=komaHTML(pc, isG(pc));
+      html+='</td>';
+    }
+    html+="</tr>";
+  }
+  $tb.innerHTML=html;
+  var tds=$tb.querySelectorAll("td");
+  for(var i=0;i<tds.length;i++) tds[i].addEventListener("click",onCellClick);
+}
+
+function dh(el,arr,pl){
+  if(arr.length===0){
+    el.innerHTML='<span class="hand-empty">持ち駒なし</span>';
+    return;
+  }
+  var co={};for(var i=0;i<arr.length;i++){co[arr[i]]=(co[arr[i]]||0)+1;}
+  var ks=Object.keys(co);
+  var h="";
+  for(var k=0;k<ks.length;k++){
+    var pc=ks[k],cnt=co[pc];
+    var cls="hand-koma";
+    if(pl==="gote") cls+=" gote-hk";
+    if(sel&&sel.t==="h"&&sel.p===pc&&T===pl) cls+=" sel";
+    h+='<div class="'+cls+'" data-hp="'+pc+'" data-pl="'+pl+'">';
+    h+='<div class="koma-bg"></div>';
+    h+='<span class="koma-text">'+dn(pc)+'</span>';
+    if(cnt>1) h+='<span class="hand-count">'+cnt+'</span>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+  var divs=el.querySelectorAll(".hand-koma");
+  for(var i=0;i<divs.length;i++) divs[i].addEventListener("click",onHandClick);
+}
+
+/* イベント */
+function onCellClick(e){
+  if(over||prm)return;
+  var td=e.currentTarget;
+  var r=parseInt(td.getAttribute("data-r"));
+  var c=parseInt(td.getAttribute("data-c"));
+  var pc=B[r][c];
+
+  if(sel){
+    var hit=false;
+    for(var i=0;i<mvs.length;i++){if(mvs[i][0]===r&&mvs[i][1]===c){hit=true;break;}}
+    if(hit){
+      if(sel.t==="h"){doDrop(sel.p,r,c);return;}
+      var mp=B[sel.r][sel.c];
+      if(cpr(mp,sel.r,r)){
+        if(mpr(mp,r)){doMv(sel.r,sel.c,r,c,true);}
+        else{prm={fr:sel.r,fc:sel.c,tr:r,tc:c};render();}
+        return;
+      }
+      doMv(sel.r,sel.c,r,c,false);
+      return;
+    }
+    // 合法手でないマスをタップした場合
+    if(sel.t==="h" && !pc){
+      // 持ち駒を選択中で空きマスだが合法手でない
+      var bpc = sel.p.toUpperCase();
+      if(bpc==="P"){
+        // 二歩チェック
+        var hasPawn=false;
+        for(var rr=0;rr<9;rr++){var pp=B[rr][c];if(pp&&bp(pp).toUpperCase()==="P"&&((T==="sente"&&isS(pp))||(T==="gote"&&isG(pp)))){hasPawn=true;break;}}
+        if(hasPawn){showWarning("二歩です！\nこの筋には歩を打てません");sel=null;mvs=[];render();return;}
+      }
+      showWarning("ここには打てません");
+      sel=null;mvs=[];render();return;
+    }
+    if(sel.t==="b" && !(pc&&((T==="sente"&&isS(pc))||(T==="gote"&&isG(pc))))){
+      // 盤上の駒を選択中で合法手でないマスをタップ
+      showWarning("そこには動けません");
+      sel=null;mvs=[];render();return;
+    }
+  }
+
+  // 相手の駒をタップした場合
+  if(pc&&((T==="sente"&&isG(pc))||(T==="gote"&&isS(pc)))){
+    showWarning("相手の駒です");
+    sel=null;mvs=[];render();return;
+  }
+
+  if(pc&&((T==="sente"&&isS(pc))||(T==="gote"&&isG(pc)))){
+    var raw=gm(pc,r,c,B);
+    var leg=[];
+    for(var i=0;i<raw.length;i++){
+      var mr=raw[i][0],mc=raw[i][1];
+      if(lm(B,r,c,mr,mc,pc,T,false)||(cpr(pc,r,mr)&&lm(B,r,c,mr,mc,pc,T,true))) leg.push(raw[i]);
+    }
+    if(leg.length===0){
+      showWarning("この駒は動かせません");
+      sel=null;mvs=[];render();return;
+    }
+    sel={t:"b",r:r,c:c};mvs=leg;render();
+    if(!timerInterval) startTimer();
+    return;
+  }
+
+  sel=null;mvs=[];render();
+}
+
+function onHandClick(e){
+  if(over||prm)return;
+  var div=e.currentTarget;
+  var pc=div.getAttribute("data-hp");
+  var pl=div.getAttribute("data-pl");
+  if(T!==pl){
+    showWarning("相手の持ち駒です");
+    return;
+  }
+  var raw=gd(pc,B,T);
+  var leg=[];
+  for(var i=0;i<raw.length;i++){
+    if(ld(B,pc,raw[i][0],raw[i][1],T)) leg.push(raw[i]);
+  }
+  if(leg.length===0){
+    var bpc=pc.toUpperCase();
+    if(bpc==="P") showWarning("この歩は打てません\n（二歩の可能性）");
+    else showWarning("この駒は打てる場所がありません");
+    sel=null;mvs=[];render();return;
+  }
+  sel={t:"h",p:pc};mvs=leg;render();
+}
+
+function doMv(fr,fc,tr,tc,pr){
+  var pc=B[fr][fc];var cp=B[tr][tc];
+  if(cp){var c=cap(cp);if(c)H[T].push(c);}
+  B[tr][tc]=pr?PRO[pc]:pc;B[fr][fc]=null;
+  endT();
+}
+function doDrop(pc,tr,tc){
+  B[tr][tc]=pc;
+  var idx=H[T].indexOf(pc);if(idx>=0)H[T].splice(idx,1);
+  endT();
+}
+
+function endT(){
+  sel=null;mvs=[];prm=null;
+  playKomaSound();
+  var nx=T==="sente"?"gote":"sente";T=nx;
+  chk=ich(B,nx);
+  chkEnd(nx);
+  render();
+  if(!over && !timerInterval) startTimer();
+}
+
+function chkEnd(tn){
+  var found=false;
+  for(var r=0;r<9&&!found;r++)for(var c=0;c<9&&!found;c++){
+    var p=B[r][c];if(!p)continue;
+    if(tn==="sente"&&!isS(p))continue;if(tn==="gote"&&!isG(p))continue;
+    var ms=gm(p,r,c,B);
+    for(var i=0;i<ms.length;i++){
+      if(lm(B,r,c,ms[i][0],ms[i][1],p,tn,false)||(cpr(p,r,ms[i][0])&&lm(B,r,c,ms[i][0],ms[i][1],p,tn,true))){found=true;break;}
+    }
+  }
+  if(!found){
+    var uq=[];var hd=H[tn];for(var i=0;i<hd.length;i++){if(uq.indexOf(hd[i])<0)uq.push(hd[i]);}
+    for(var k=0;k<uq.length&&!found;k++){
+      var ds=gd(uq[k],B,tn);
+      for(var d=0;d<ds.length&&!found;d++){if(ld(B,uq[k],ds[d][0],ds[d][1],tn))found=true;}
+    }
+  }
+  if(!found){
+    over=chk?(tn==="sente"?"後手":"先手")+"の勝ち（詰み）":"引き分け";
+    if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  }
+}
+
+/* ダイアログ */
+document.getElementById("py").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,true);});
+document.getElementById("pn").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,false);});
+document.getElementById("rbtn").addEventListener("click",function(){init();render();});
+
+/* 起動 */
+init();
+render();
+
+})();
+</script>
+</body>
+</html>
