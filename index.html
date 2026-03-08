@@ -72,6 +72,7 @@ body {
 .gote-row .hand-area { flex-direction: row-reverse; }
 .hand-empty { font-size: 13px; opacity: 0.4; }
 .gote-row .hand-empty { transform: rotate(180deg); }
+.gote-row .resign-btn { transform: rotate(180deg); }
 
 /* ===== タイマー ===== */
 .timer-box {
@@ -489,6 +490,7 @@ body { padding: 12px 8px; }
       <span class="timer-time" id="gote-time">10:00</span>
     </div>
     <div id="gh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
+    <button class="resign-btn" id="resign-gote">投了</button>
   </div>
 
   <!-- 盤 -->
@@ -514,12 +516,9 @@ body { padding: 12px 8px; }
       <span class="timer-time" id="sente-time">10:00</span>
     </div>
     <div id="sh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
+    <button class="resign-btn" id="resign-sente">投了</button>
   </div>
 
-  <div class="btn-row">
-    <button class="reset-btn" id="rbtn">新しい対局</button>
-    <button class="resign-btn" id="resign-btn">投了</button>
-  </div>
 </div>
 
 <!-- 成りダイアログ -->
@@ -982,19 +981,13 @@ function chkEnd(tn){
 /* ダイアログ */
 document.getElementById("py").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,true);});
 document.getElementById("pn").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,false);});
-document.getElementById("rbtn").addEventListener("click",function(){
-  hideWinDialog();
-  init();render();
-});
 
 /* 勝ちダイアログ */
 var $winOv=document.getElementById("win-ov");
 var $winText=document.getElementById("win-text");
 
 function showWinDialog(winner){
-  // winner: "sente" or "gote"
   $winText.textContent="あなたの勝ちです";
-  // 勝者側の向きに表示
   if(winner==="gote"){
     $winOv.classList.add("gote-win");
   } else {
@@ -1006,18 +999,24 @@ function hideWinDialog(){
   $winOv.classList.remove("show");
   $winOv.classList.remove("gote-win");
 }
-document.getElementById("win-ok").addEventListener("click",function(){ hideWinDialog(); });
+document.getElementById("win-ok").addEventListener("click",function(){
+  hideWinDialog();
+  init();
+  render();
+});
 
 /* 投了 */
-document.getElementById("resign-btn").addEventListener("click",function(){
+function doResign(who){
   if(over) return;
-  // 現在の手番が投了 → 相手の勝ち
-  var winner = T==="sente" ? "gote" : "sente";
-  over = (T==="sente" ? "後手" : "先手") + "の勝ち（投了）";
+  // who が投了 → 相手の勝ち
+  var winner = who==="sente" ? "gote" : "sente";
+  over = (who==="sente" ? "後手" : "先手") + "の勝ち（投了）";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
   render();
   showWinDialog(winner);
-});
+}
+document.getElementById("resign-sente").addEventListener("click",function(){ doResign("sente"); });
+document.getElementById("resign-gote").addEventListener("click",function(){ doResign("gote"); });
 
 /* 起動 */
 init();
