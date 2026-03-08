@@ -390,6 +390,70 @@ table.board td.cap::after {
 }
 
 /* 警告トースト */
+
+/* ===== 検討モード ===== */
+.review-bar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.review-bar.show { display: flex; }
+
+.review-btn {
+  padding: 6px 18px;
+  background: linear-gradient(135deg, #4a3520, #6b4423);
+  color: #e8d5b0;
+  border: 1.5px solid #8B7355;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  min-width: 44px;
+  text-align: center;
+}
+.review-btn:hover { background: linear-gradient(135deg, #6b4423, #8B5E3C); }
+.review-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.review-info {
+  font-size: 14px;
+  color: #c4a875;
+  min-width: 80px;
+  text-align: center;
+}
+
+.review-exit-btn {
+  padding: 5px 16px;
+  background: linear-gradient(135deg, #5a1a1a, #7a2a2a);
+  color: #e8d5b0;
+  border: 1.5px solid #8B4040;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  margin-left: 8px;
+}
+.review-exit-btn:hover { background: linear-gradient(135deg, #7a2a2a, #943535); }
+
+.review-overlay {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 4;
+  cursor: default;
+}
+.board-area { position: relative; }
+/* 検討モード中は投了ボタン非表示 */
+.review-mode .resign-btn { display: none; }
+.review-mode .timer-box { opacity: 0.3; }
+
 .warning-toast {
   position: fixed;
   top: 50%;
@@ -519,6 +583,16 @@ body { padding: 12px 8px; }
     </div>
     <div id="sh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
     <button class="resign-btn" id="resign-sente">投了</button>
+  </div>
+
+  <!-- 検討バー -->
+  <div class="review-bar" id="review-bar">
+    <button class="review-btn" id="rev-first">⏮</button>
+    <button class="review-btn" id="rev-prev">◀</button>
+    <span class="review-info" id="rev-info">0 / 0</span>
+    <button class="review-btn" id="rev-next">▶</button>
+    <button class="review-btn" id="rev-last">⏭</button>
+    <button class="review-exit-btn" id="rev-exit">対局に戻る</button>
   </div>
 
 </div>
@@ -704,6 +778,16 @@ function ld(bd,pc,tr,tc,tn){
 /* 状態 */
 var B,T,sel,mvs,H,prm,over,chk;
 var timerSente, timerGote, timerInterval;
+var snapshots=[]; // 盤面スナップショット履歴
+var reviewMode=false, reviewIdx=0;
+
+function takeSnapshot(){
+  snapshots.push({
+    board: B.map(function(r){return r.slice();}),
+    hands: {sente:H.sente.slice(), gote:H.gote.slice()},
+    turn: T
+  });
+}
 
 function init(){
   B=INIT.map(function(r){return r.slice();});
@@ -712,6 +796,14 @@ function init(){
   timerGote=TIMER_TOTAL;
   if(timerInterval) clearInterval(timerInterval);
   timerInterval=null;
+  snapshots=[];
+  takeSnapshot(); // 初期局面を保存
+  reviewMode=false;
+  reviewIdx=0;
+  var ba=document.querySelector(".board-area");
+  if(ba) ba.classList.remove("review-mode");
+  var rb=document.getElementById("review-bar");
+  if(rb) rb.classList.remove("show");
 }
 
 /* タイマー */
@@ -864,7 +956,7 @@ function dh(el,arr,pl){
 
 /* イベント */
 function onCellClick(e){
-  if(over||prm)return;
+  if(reviewMode||over||prm)return;
   var td=e.currentTarget;
   var r=parseInt(td.getAttribute("data-r"));
   var c=parseInt(td.getAttribute("data-c"));
@@ -930,7 +1022,7 @@ function onCellClick(e){
 }
 
 function onHandClick(e){
-  if(over||prm)return;
+  if(reviewMode||over||prm)return;
   var div=e.currentTarget;
   var pc=div.getAttribute("data-hp");
   var pl=div.getAttribute("data-pl");
@@ -968,6 +1060,7 @@ function endT(){
   sel=null;mvs=[];prm=null;
   playKomaSound();
   var nx=T==="sente"?"gote":"sente";T=nx;
+  takeSnapshot(); // 局面を保存
   chk=ich(B,nx);
   if(chk) setTimeout(playOuteSound, 100);
   chkEnd(nx);
@@ -1024,6 +1117,84 @@ function hideWinDialog(){
 }
 document.getElementById("win-ok").addEventListener("click",function(){
   hideWinDialog();
+  enterReviewMode();
+});
+
+/* ===== 検討モード ===== */
+function enterReviewMode(){
+  reviewMode=true;
+  reviewIdx=snapshots.length-1;
+  document.querySelector(".board-area").classList.add("review-mode");
+  document.getElementById("review-bar").classList.add("show");
+  showReviewAt(reviewIdx);
+}
+
+function showReviewAt(idx){
+  if(idx<0) idx=0;
+  if(idx>=snapshots.length) idx=snapshots.length-1;
+  reviewIdx=idx;
+  var snap=snapshots[idx];
+  // 盤面を描画（読み取り専用）
+  var $tbody=document.getElementById("tb");
+  var html="";
+  for(var r=0;r<9;r++){
+    html+="<tr>";
+    for(var c=0;c<9;c++){
+      var pc=snap.board[r][c];
+      html+='<td>';
+      if(pc) html+=komaHTML(pc, isG(pc));
+      html+='</td>';
+    }
+    html+="</tr>";
+  }
+  $tbody.innerHTML=html;
+  // 持ち駒を描画
+  drawReviewHand(document.getElementById("sh"), snap.hands.sente, "sente");
+  drawReviewHand(document.getElementById("gh"), snap.hands.gote, "gote");
+  // 手番表示
+  var $si=document.getElementById("si");
+  var $gi=document.getElementById("gi");
+  if(snap.turn==="sente"){$si.classList.add("on");$gi.classList.remove("on");}
+  else{$gi.classList.add("on");$si.classList.remove("on");}
+  // 情報
+  document.getElementById("rev-info").textContent=idx+"手目 / "+(snapshots.length-1)+"手";
+  // ボタン状態
+  document.getElementById("rev-first").disabled=(idx===0);
+  document.getElementById("rev-prev").disabled=(idx===0);
+  document.getElementById("rev-next").disabled=(idx>=snapshots.length-1);
+  document.getElementById("rev-last").disabled=(idx>=snapshots.length-1);
+  syncRowWidth();
+}
+
+function drawReviewHand(el,arr,pl){
+  if(arr.length===0){
+    el.innerHTML='<span class="hand-empty">持ち駒なし</span>';
+    return;
+  }
+  var co={};for(var i=0;i<arr.length;i++){co[arr[i]]=(co[arr[i]]||0)+1;}
+  var ks=Object.keys(co);
+  var h="";
+  for(var k=0;k<ks.length;k++){
+    var pc=ks[k],cnt=co[pc];
+    var cls="hand-koma";
+    if(pl==="gote") cls+=" gote-hk";
+    h+='<div class="'+cls+'">';
+    h+='<div class="koma-bg"></div>';
+    h+='<span class="koma-text">'+dn(pc)+'</span>';
+    if(cnt>1) h+='<span class="hand-count">'+cnt+'</span>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+
+document.getElementById("rev-first").addEventListener("click",function(){ showReviewAt(0); });
+document.getElementById("rev-prev").addEventListener("click",function(){ showReviewAt(reviewIdx-1); });
+document.getElementById("rev-next").addEventListener("click",function(){ showReviewAt(reviewIdx+1); });
+document.getElementById("rev-last").addEventListener("click",function(){ showReviewAt(snapshots.length-1); });
+document.getElementById("rev-exit").addEventListener("click",function(){
+  reviewMode=false;
+  document.querySelector(".board-area").classList.remove("review-mode");
+  document.getElementById("review-bar").classList.remove("show");
   init();
   render();
 });
