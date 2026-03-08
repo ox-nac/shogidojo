@@ -652,7 +652,7 @@ function gd(pc,bd,tn){
   var mv=[],b=pc.toUpperCase();
   for(var r=0;r<9;r++){for(var c=0;c<9;c++){
     if(bd[r][c])continue;
-    if(b==="P"){var dup=false;for(var rr=0;rr<9;rr++){var pp=bd[rr][c];if(pp&&bp(pp).toUpperCase()==="P"&&((tn==="sente"&&isS(pp))||(tn==="gote"&&isG(pp)))){dup=true;break;}}if(dup)continue;}
+    if(b==="P"){var dup=false;for(var rr=0;rr<9;rr++){var pp=bd[rr][c];if(pp&&(pp==="P"||pp==="p")&&((tn==="sente"&&isS(pp))||(tn==="gote"&&isG(pp)))){dup=true;break;}}if(dup)continue;}
     if((b==="P"||b==="L")&&((tn==="sente"&&r===0)||(tn==="gote"&&r===8)))continue;
     if(b==="N"&&((tn==="sente"&&r<=1)||(tn==="gote"&&r>=7)))continue;
     mv.push([r,c]);
@@ -891,7 +891,7 @@ function onCellClick(e){
       if(bpc==="P"){
         // 二歩チェック
         var hasPawn=false;
-        for(var rr=0;rr<9;rr++){var pp=B[rr][c];if(pp&&bp(pp).toUpperCase()==="P"&&((T==="sente"&&isS(pp))||(T==="gote"&&isG(pp)))){hasPawn=true;break;}}
+        for(var rr=0;rr<9;rr++){var pp=B[rr][c];if(pp&&(pp==="P"||pp==="p")&&((T==="sente"&&isS(pp))||(T==="gote"&&isG(pp)))){hasPawn=true;break;}}
         if(hasPawn){showWarning("二歩です！\nこの筋には歩を打てません");sel=null;mvs=[];render();return;}
       }
       showWarning("ここには打てません");
