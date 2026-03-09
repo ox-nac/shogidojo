@@ -995,17 +995,24 @@ function unlockAudio(callback){
   }
 }
 
-// バッファから再生
-function playSound(name){
+// バッファから再生（vol: 音量 0.0〜任意、省略で1.0）
+function playSound(name, vol){
   if(!audioCtx || !audioBuffers[name]) return;
   var source = audioCtx.createBufferSource();
   source.buffer = audioBuffers[name];
-  source.connect(audioCtx.destination);
+  if(vol !== undefined && vol !== 1){
+    var gain = audioCtx.createGain();
+    gain.gain.value = vol;
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+  } else {
+    source.connect(audioCtx.destination);
+  }
   source.start(0);
   return source;
 }
 
-function playKomaSound(){ playSound("koma"); }
+function playKomaSound(){ playSound("koma", 2.0); }
 function playOuteSound(){ playSound("oute"); }
 function playWinSound(){ playSound("win"); }
 function playStartSound(){ playSound("start"); }
@@ -1017,7 +1024,7 @@ function startBGM(){
   bgmSource.buffer = audioBuffers.bgm;
   bgmSource.loop = true;
   var gain = audioCtx.createGain();
-  gain.gain.value = 0.3;
+  gain.gain.value = 0.12;
   bgmSource.connect(gain);
   gain.connect(audioCtx.destination);
   bgmSource.start(0);
