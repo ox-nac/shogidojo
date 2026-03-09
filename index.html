@@ -955,6 +955,7 @@ body { padding: 8px 4px; }
       <button class="time-btn" data-time="180">3分</button>
       <button class="time-btn" data-time="300">5分</button>
       <button class="time-btn selected" data-time="600">10分</button>
+      <button class="time-btn" data-time="10" data-byoyomi="true">10秒</button>
     </div>
   </div>
 
@@ -1130,8 +1131,10 @@ var INIT=[
   ["L","N","S","G","K","G","S","N","L"]
 ];
 
-var TIMER_TOTAL = 600; // デフォルト10分、タイトル画面で変更可能
+var TIMER_TOTAL = 600;
 var selectedTime = 600;
+var byoyomiMode = false;
+var BYOYOMI_SEC = 10;
 
 /* ===== Web Audio API サウンドシステム ===== */
 var audioCtx = null;
@@ -1937,8 +1940,15 @@ function playEndgameCutin(){
 function endT(){
   sel=null;mvs=[];prm=null;
   playKomaSound();
+
+  // 秒読みモード: 指した側のタイマーをリセット
+  if(byoyomiMode){
+    if(T==="sente") timerSente = BYOYOMI_SEC;
+    else timerGote = BYOYOMI_SEC;
+  }
+
   var nx=T==="sente"?"gote":"sente";T=nx;
-  takeSnapshot(); // 局面を保存
+  takeSnapshot();
   chk=ich(B,nx);
   if(chk) playOuteSound();
   chkEnd(nx);
@@ -2220,7 +2230,21 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     unlockAudio(function(){
       playStartSound();
 
-      if(selectedTime <= 180){
+      if(byoyomiMode){
+        // 10秒秒読み: 全警告スキップ、終盤カットイン+終盤BGMでスタート
+        sente5minWarned = true;
+        gote5minWarned = true;
+        sente3minWarned = true;
+        gote3minWarned = true;
+        sente1minWarned = true;
+        gote1minWarned = true;
+        endgameCutinDone = true;
+        setTimeout(function(){
+          playEndgameCutin();
+        }, 500);
+        startTimer();
+
+      } else if(selectedTime <= 180){
         // 3分: カットイン演出→残り3分音声→終盤BGMでスタート
         // フラグを先にセット（init後なのでリセットされている）
         sente5minWarned = true;
@@ -2361,6 +2385,7 @@ for(var i=0; i<timeBtns.length; i++){
     for(var j=0; j<timeBtns.length; j++) timeBtns[j].classList.remove("selected");
     this.classList.add("selected");
     selectedTime = parseInt(this.getAttribute("data-time"));
+    byoyomiMode = this.hasAttribute("data-byoyomi");
   });
 }
 
