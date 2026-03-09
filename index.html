@@ -468,17 +468,61 @@ table.board td.cap::after {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0);
   justify-content: center;
   align-items: center;
   z-index: 1100;
+  transition: background 0.3s;
 }
-.video-overlay.show { display: flex; }
+.video-overlay.show {
+  display: flex;
+  background: rgba(0,0,0,0.85);
+}
 .video-overlay video {
-  max-width: 85vw;
-  max-height: 70vh;
-  border-radius: 8px;
-  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+  max-width: 80vw;
+  max-height: 65vh;
+  border-radius: 6px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 20px rgba(200,160,50,0.15);
+  border: 2px solid rgba(200,160,50,0.25);
+  transform: translateX(-110vw);
+}
+
+/* カットイン: 左からスライドイン */
+.video-overlay.cutin video {
+  animation: cutinSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes cutinSlide {
+  0% { transform: translateX(-110vw) scale(0.8); }
+  70% { transform: translateX(3vw) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+/* カットアウト: 右へスライドアウト */
+.video-overlay.cutout video {
+  animation: cutoutSlide 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+@keyframes cutoutSlide {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(-3vw) scale(1.02); }
+  100% { transform: translateX(110vw) scale(0.8); }
+}
+
+/* 後手勝ち: 回転 */
+.video-overlay.gote-winner.cutin video {
+  animation: cutinSlideGote 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes cutinSlideGote {
+  0% { transform: translateX(-110vw) scale(0.8) rotate(180deg); }
+  70% { transform: translateX(3vw) scale(1.02) rotate(180deg); }
+  100% { transform: translateX(0) scale(1) rotate(180deg); }
+}
+.video-overlay.gote-winner.cutout video {
+  animation: cutoutSlideGote 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+@keyframes cutoutSlideGote {
+  0% { transform: translateX(0) scale(1) rotate(180deg); }
+  30% { transform: translateX(-3vw) scale(1.02) rotate(180deg); }
+  100% { transform: translateX(110vw) scale(0.8) rotate(180deg); }
 }
 
 .warning-toast {
@@ -946,7 +990,8 @@ var soundFiles = {
   oute: "oute.mp3",
   win: "shorisengen.mp3",
   bgm: "bgm.mp3",
-  start: "start.mp3"
+  start: "start.mp3",
+  cutin: "cutin.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1024,7 +1069,7 @@ function startBGM(){
   bgmSource.buffer = audioBuffers.bgm;
   bgmSource.loop = true;
   var gain = audioCtx.createGain();
-  gain.gain.value = 0.06;
+  gain.gain.value = 0.12;
   bgmSource.connect(gain);
   gain.connect(audioCtx.destination);
   bgmSource.start(0);
@@ -1608,22 +1653,48 @@ for(var i=0; i<revBtns.length; i++){
 var $vidOv = document.getElementById("video-ov");
 
 function playResignVideo(winner){
-  $vidOv.classList.add("show");
-  touryouVideo.muted = false;
+  // リセット
+  $vidOv.classList.remove("cutin","cutout","gote-winner");
+  $vidOv.classList.toggle("gote-winner", winner==="gote");
+
+  // 表示 + カットインアニメーション + 効果音
+  $vidOv.classList.add("show","cutin");
+  playSound("cutin", 1.5);
+
+  // 動画はミュートで一時停止状態にしておく
+  touryouVideo.muted = true;
   touryouVideo.currentTime = 0;
-  touryouVideo.volume = 1;
-  touryouVideo.play().catch(function(){
-    $vidOv.classList.remove("show");
-    showWinDialog(winner);
-  });
+  touryouVideo.play().catch(function(){});
+  touryouVideo.pause();
+
+  // カットイン完了後（0.4s）+ 少し間を置いて動画の音声開始
+  setTimeout(function(){
+    touryouVideo.muted = false;
+    touryouVideo.volume = 1;
+    touryouVideo.currentTime = 0;
+    touryouVideo.play().catch(function(){
+      cleanupVideo(winner);
+    });
+  }, 600);
+
+  // 動画終了 → カットアウト
   touryouVideo.onended = function(){
-    $vidOv.classList.remove("show");
-    showWinDialog(winner);
+    $vidOv.classList.remove("cutin");
+    $vidOv.classList.add("cutout");
+    // カットアウトアニメーション完了後にクリーンアップ
+    setTimeout(function(){
+      cleanupVideo(winner);
+    }, 450);
   };
+
   touryouVideo.onerror = function(){
-    $vidOv.classList.remove("show");
-    showWinDialog(winner);
+    cleanupVideo(winner);
   };
+}
+
+function cleanupVideo(winner){
+  $vidOv.classList.remove("show","cutin","cutout","gote-winner");
+  showWinDialog(winner);
 }
 
 function handleResign(who){
