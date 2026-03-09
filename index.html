@@ -1466,6 +1466,23 @@ function takeSnapshot(){
 
 function init(){
   B=INIT.map(function(r){return r.slice();});
+
+  // 奥側が先手の場合、盤面を180度回転（上下反転＋先手後手入替）
+  if(furiResult && !furiResult.temaeSente){
+    var flipped=[];
+    for(var r=8;r>=0;r--){
+      var row=[];
+      for(var c=8;c>=0;c--){
+        var p=B[r][c];
+        if(p===null) row.push(null);
+        else if(p===p.toUpperCase()) row.push(p.toLowerCase());
+        else row.push(p.toUpperCase());
+      }
+      flipped.push(row);
+    }
+    B=flipped;
+  }
+
   T="sente";sel=null;mvs=[];H={sente:[],gote:[]};prm=null;over=null;chk=false;
   timerSente=TIMER_TOTAL;
   timerGote=TIMER_TOTAL;
