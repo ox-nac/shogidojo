@@ -865,15 +865,10 @@ body { padding: 12px 8px; }
 
 <!-- 投了動画カットイン -->
 <div class="video-overlay" id="video-ov">
-  <video id="touryou-video" src="touryou.mp4" playsinline webkit-playsinline preload="auto"></video>
+  <video id="touryou-video" src="touryou.mp4" playsinline webkit-playsinline preload="auto" muted></video>
 </div>
 
-<!-- 音声要素（HTML埋め込み - iPad Safari対策） -->
-<audio id="snd-koma" src="shogikoma.mp3" preload="auto"></audio>
-<audio id="snd-oute" src="oute.mp3" preload="auto"></audio>
-<audio id="snd-win" src="shorisengen.mp3" preload="auto"></audio>
-<audio id="snd-bgm" src="bgm.mp3" preload="auto" loop></audio>
-<audio id="snd-start" src="start.mp3" preload="auto"></audio>
+<!-- 音声はWeb Audio APIで管理 -->
 
 <script>
 (function(){
@@ -904,61 +899,93 @@ var INIT=[
 
 var TIMER_TOTAL = 10 * 60; // 10分（秒）
 
-/* ===== メディア管理（iPad Safari完全対応） ===== */
-var komaSound = document.getElementById("snd-koma");
-var outeSound = document.getElementById("snd-oute");
-var winSound = document.getElementById("snd-win");
-var bgm = document.getElementById("snd-bgm");
-var touryouVideo = document.getElementById("touryou-video");
-var startSound = document.getElementById("snd-start");
+/* ===== Web Audio API ベースのサウンドシステム（iPad Safari対応） ===== */
+var audioCtx = null;
+var audioBuffers = {};
+var bgmSource = null;
 var bgmStarted = false;
+var audioUnlocked = false;
 
-/* 全メディアをアンロック（ユーザータップ内で呼ぶ） */
-function unlockAllMedia(){
-  var audioList = [komaSound, outeSound, winSound, bgm, startSound];
-  for(var i=0; i<audioList.length; i++){
-    var m = audioList[i];
-    if(m){
-      m.volume = 0;
-      try{ m.play().then(function(){ this.pause(); this.currentTime=0; }.bind(m)).catch(function(){}); }catch(e){}
-    }
+// AudioContextを初期化（ユーザータップ内で呼ぶ）
+function initAudioContext(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+// ユーザータップで AudioContext を resume（これが iPad Safari で最重要）
+function unlockAudio(){
+  if(audioUnlocked) return;
+  initAudioContext();
+  if(audioCtx.state === "suspended"){
+    audioCtx.resume();
   }
-  setTimeout(function(){
-    if(komaSound) komaSound.volume = 1;
-    if(outeSound) outeSound.volume = 1;
-    if(winSound) winSound.volume = 1;
-    if(bgm) bgm.volume = 0.3;
-  }, 300);
+  audioUnlocked = true;
 }
 
-function playKomaSound(){
-  if(!komaSound) return;
-  komaSound.currentTime = 0;
-  komaSound.play().catch(function(){});
+// 音声ファイルを fetch して AudioBuffer にデコード
+function loadSound(name, url){
+  fetch(url)
+    .then(function(res){ return res.arrayBuffer(); })
+    .then(function(buf){
+      initAudioContext();
+      return audioCtx.decodeAudioData(buf);
+    })
+    .then(function(decoded){
+      audioBuffers[name] = decoded;
+    })
+    .catch(function(){});
 }
-function playOuteSound(){
-  if(!outeSound) return;
-  outeSound.currentTime = 0;
-  outeSound.play().catch(function(){});
+
+// バッファから再生
+function playSound(name){
+  if(!audioCtx || !audioBuffers[name]) return;
+  var source = audioCtx.createBufferSource();
+  source.buffer = audioBuffers[name];
+  source.connect(audioCtx.destination);
+  source.start(0);
+  return source;
 }
-function playWinSound(){
-  if(!winSound) return;
-  winSound.currentTime = 0;
-  winSound.play().catch(function(){});
-}
+
+// BGM（ループ再生）
 function startBGM(){
-  if(!bgm || bgmStarted) return;
-  bgm.currentTime = 0;
-  bgm.volume = 0.3;
-  bgm.play().catch(function(){});
+  if(!audioCtx || !audioBuffers.bgm || bgmStarted) return;
+  bgmSource = audioCtx.createBufferSource();
+  bgmSource.buffer = audioBuffers.bgm;
+  bgmSource.loop = true;
+  var gain = audioCtx.createGain();
+  gain.gain.value = 0.3;
+  bgmSource.connect(gain);
+  gain.connect(audioCtx.destination);
+  bgmSource.start(0);
   bgmStarted = true;
 }
 function stopBGM(){
-  if(!bgm) return;
-  bgm.pause();
-  bgm.currentTime = 0;
+  if(bgmSource){
+    try{ bgmSource.stop(); }catch(e){}
+    bgmSource = null;
+  }
   bgmStarted = false;
 }
+
+// 全音声ファイルを読み込み
+function loadAllSounds(){
+  loadSound("koma", "shogikoma.mp3");
+  loadSound("oute", "oute.mp3");
+  loadSound("win", "shorisengen.mp3");
+  loadSound("bgm", "bgm.mp3");
+  loadSound("start", "start.mp3");
+}
+
+function playKomaSound(){ playSound("koma"); }
+function playOuteSound(){ playSound("oute"); }
+function playWinSound(){ playSound("win"); }
+function playStartSound(){ playSound("start"); }
+
+// 動画（HTML video要素をそのまま使う）
+var touryouVideo = document.getElementById("touryou-video");
+
+// ページ読み込み時に音声ファイルをフェッチ開始
+loadAllSounds();
 
 /* 警告トースト */
 var $warn = document.getElementById("warn");
@@ -1494,10 +1521,10 @@ var $vidOv = document.getElementById("video-ov");
 
 function playResignVideo(winner){
   $vidOv.classList.add("show");
+  touryouVideo.muted = false;
   touryouVideo.currentTime = 0;
   touryouVideo.volume = 1;
   touryouVideo.play().catch(function(){
-    // 再生できなかった場合はスキップ
     $vidOv.classList.remove("show");
     showWinDialog(winner);
   });
@@ -1540,8 +1567,8 @@ document.getElementById("furi-btn").addEventListener("click", function(){
 
   // === 状態2: 「対局開始」として押された場合 ===
   if(furiDone && furiResult){
-    // ユーザータップの中で全メディアをアンロック（iPad Safari必須）
-    unlockAllMedia();
+    // ユーザータップの中でAudioContextをアンロック（iPad Safari必須）
+    unlockAudio();
 
     // ゲーム画面に名前を反映
     document.getElementById("si").textContent = "☗ " + furiResult.sente;
@@ -1552,15 +1579,16 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     init();
     render();
 
-    // アンロック完了後に対局開始音声→BGM開始
+    // 少し待ってから対局開始音声→BGM開始
     setTimeout(function(){
-      if(startSound){ startSound.currentTime=0; startSound.play().catch(function(){}); }
+      playStartSound();
       startBGM();
-    }, 500);
+    }, 300);
     return;
   }
 
   // === 状態1: 「振る」として押された場合 ===
+  unlockAudio(); // 最初のタップでAudioContextをアンロック
   btn.disabled = true;
   furiDone = false;
   document.getElementById("furi-result").textContent = "";
