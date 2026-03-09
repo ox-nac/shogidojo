@@ -1499,7 +1499,29 @@ document.getElementById("rev-next").addEventListener("click",function(){ showRev
 document.getElementById("rev-last").addEventListener("click",function(){ showReviewAt(snapshots.length-1); });
 
 /* 投了 */
-function doResign(who){
+/* 投了動画 */
+var $vidOv = document.getElementById("video-ov");
+var $vid = document.getElementById("touryou-video");
+
+function playResignVideo(winner){
+  $vidOv.classList.add("show");
+  $vid.currentTime = 0;
+  $vid.play().catch(function(){
+    // 再生できなかった場合はスキップ
+    $vidOv.classList.remove("show");
+    showWinDialog(winner);
+  });
+  $vid.onended = function(){
+    $vidOv.classList.remove("show");
+    showWinDialog(winner);
+  };
+  $vid.onerror = function(){
+    $vidOv.classList.remove("show");
+    showWinDialog(winner);
+  };
+}
+
+function handleResign(who){
   if(over) return;
   var winner = who==="sente" ? "gote" : "sente";
   var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
@@ -1507,27 +1529,13 @@ function doResign(who){
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
   stopBGM();
   render();
-
-  // 動画カットイン再生
-  var $vidOv = document.getElementById("video-ov");
-  var $vid = document.getElementById("touryou-video");
-  $vidOv.classList.add("show");
-  $vid.currentTime = 0;
-  $vid.play().catch(function(){});
-
-  // 動画終了後にダイアログ表示
-  $vid.onended = function(){
-    $vidOv.classList.remove("show");
-    showWinDialog(winner);
-  };
-  // 動画が読み込めなかった場合のフォールバック
-  $vid.onerror = function(){
-    $vidOv.classList.remove("show");
-    showWinDialog(winner);
-  };
+  // ユーザータップの直接コールバック内で動画再生
+  playResignVideo(winner);
 }
-document.getElementById("resign-sente").addEventListener("click",function(){ doResign("sente"); });
-document.getElementById("resign-gote").addEventListener("click",function(){ doResign("gote"); });
+
+// 投了ボタン — クリックイベント内で直接実行（iPad対策）
+document.getElementById("resign-sente").addEventListener("click",function(){ handleResign("sente"); });
+document.getElementById("resign-gote").addEventListener("click",function(){ handleResign("gote"); });
 
 /* 起動 */
 init();
@@ -1616,6 +1624,9 @@ document.getElementById("start-btn").addEventListener("click", function(){
   render();
   // ユーザータップの中でBGMを直接再生（iPad対策）
   bgm.play().then(function(){ bgmStarted = true; }).catch(function(){});
+  // 動画もアンロック（iPad Safari対策: 一度play→pauseでロック解除）
+  var v = document.getElementById("touryou-video");
+  v.play().then(function(){ v.pause(); v.currentTime = 0; }).catch(function(){});
 });
 
 /* 検討モードの「新規対局」→タイトル画面に戻る */
