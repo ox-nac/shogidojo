@@ -998,11 +998,13 @@ body { padding: 8px 4px; }
     <div id="gi" class="turn-label">
       <div class="turn-role">☖ 後手</div>
       <div class="turn-name" id="gi-name"></div>
-      <button class="bgm-toggle-inline on" id="bgm-toggle-gote">♪ BGM</button>
     </div>
-    <div id="gote-timer" class="timer-box">
-      <span class="timer-icon">⏱</span>
-      <span class="timer-time" id="gote-time">10:00</span>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div id="gote-timer" class="timer-box">
+        <span class="timer-icon">⏱</span>
+        <span class="timer-time" id="gote-time">10:00</span>
+      </div>
+      <button class="bgm-toggle-inline on" id="bgm-toggle-gote">♪ BGM</button>
     </div>
     <div id="gh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
     <button class="resign-btn" id="resign-gote">投了</button>
@@ -1028,11 +1030,13 @@ body { padding: 8px 4px; }
     <div id="si" class="turn-label on">
       <div class="turn-role">☗ 先手</div>
       <div class="turn-name" id="si-name"></div>
-      <button class="bgm-toggle-inline on" id="bgm-toggle-sente">♪ BGM</button>
     </div>
-    <div id="sente-timer" class="timer-box active">
-      <span class="timer-icon">⏱</span>
-      <span class="timer-time" id="sente-time">10:00</span>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div id="sente-timer" class="timer-box active">
+        <span class="timer-icon">⏱</span>
+        <span class="timer-time" id="sente-time">10:00</span>
+      </div>
+      <button class="bgm-toggle-inline on" id="bgm-toggle-sente">♪ BGM</button>
     </div>
     <div id="sh" class="hand-area"><span class="hand-empty">持ち駒なし</span></div>
     <button class="resign-btn" id="resign-sente">投了</button>
@@ -1220,6 +1224,19 @@ function playSound(name, vol){
 /* カットイン中フラグ — trueの間は駒音等を抑制 */
 var cutinActive = false;
 
+function beginCutin(){
+  cutinActive = true;
+  muteBGM();
+  muteEndgameBGM();
+}
+function endCutin(){
+  cutinActive = false;
+  if(bgmEnabled){
+    if(endgameBgmStarted) unmuteEndgameBGM();
+    else if(bgmStarted) unmuteBGM();
+  }
+}
+
 function playKomaSound(){ playSound("koma", 3.5); }
 function playOuteSound(){ playSound("oute"); }
 function playWinSound(){ playSound("win"); }
@@ -1373,6 +1390,13 @@ function bp(p){return UNP[p]||p;}
 function cap(p){if(!p)return null;var b=UNP[p]||p;return isS(p)?b.toLowerCase():b.toUpperCase();}
 function cb(b){return b.map(function(r){return r.slice();});}
 
+// 駒の先後を入れ替え（大文字↔小文字、成り駒も対応）
+function flipPiece(p){
+  if(!p) return null;
+  if(isS(p)) return p.toLowerCase();
+  return p.toUpperCase();
+}
+
 function komaHTML(piece, isGotePiece){
   var cls="koma";
   if(isGotePiece) cls+=" gote";
@@ -1466,23 +1490,6 @@ function takeSnapshot(){
 
 function init(){
   B=INIT.map(function(r){return r.slice();});
-
-  // 奥側が先手の場合、盤面を180度回転（上下反転＋先手後手入替）
-  if(furiResult && !furiResult.temaeSente){
-    var flipped=[];
-    for(var r=8;r>=0;r--){
-      var row=[];
-      for(var c=8;c>=0;c--){
-        var p=B[r][c];
-        if(p===null) row.push(null);
-        else if(p===p.toUpperCase()) row.push(p.toLowerCase());
-        else row.push(p.toUpperCase());
-      }
-      flipped.push(row);
-    }
-    B=flipped;
-  }
-
   T="sente";sel=null;mvs=[];H={sente:[],gote:[]};prm=null;over=null;chk=false;
   timerSente=TIMER_TOTAL;
   timerGote=TIMER_TOTAL;
@@ -1630,8 +1637,13 @@ var $ov=document.getElementById("ov");
 
 function render(){
   drawBoard();
-  dh($sh,H.sente,"sente");
-  dh($gh,H.gote,"gote");
+  if(furiResult && !furiResult.temaeSente){
+    dh($sh,H.gote,"gote");
+    dh($gh,H.sente,"sente");
+  } else {
+    dh($sh,H.sente,"sente");
+    dh($gh,H.gote,"gote");
+  }
   // 手番表示: temaeSente=true → 下=先手, temaeSente=false → 下=後手
   var bottomActive, topActive;
   if(furiResult && !furiResult.temaeSente){
@@ -1674,9 +1686,13 @@ function renderBanners(){
 
 function drawBoard(){
   var html="";
-  for(var r=0;r<9;r++){
+  var flipped = furiResult && !furiResult.temaeSente;
+  for(var ri=0;ri<9;ri++){
     html+="<tr>";
-    for(var c=0;c<9;c++){
+    for(var ci=0;ci<9;ci++){
+      // flipped: 行を逆順(8→0)、列も逆順(8→0) で描画
+      var r = flipped ? (8 - ri) : ri;
+      var c = flipped ? (8 - ci) : ci;
       var pc=B[r][c];
       var cls="";
       if(sel&&sel.t==="b"&&sel.r===r&&sel.c===c) cls+=" sel";
@@ -1684,7 +1700,12 @@ function drawBoard(){
       for(var m=0;m<mvs.length;m++){if(mvs[m][0]===r&&mvs[m][1]===c){isTgt=true;break;}}
       if(isTgt){cls+=pc?" cap":" mv";}
       html+='<td class="'+cls.trim()+'" data-r="'+r+'" data-c="'+c+'">';
-      if(pc) html+=komaHTML(pc, isG(pc));
+      if(pc){
+        // flipped時: 先手の駒(大文字)が画面下部=正位置、後手の駒(小文字)が画面上部=回転
+        // 通常時: 後手の駒(小文字)が画面上部=回転
+        // どちらも isG(pc) で正しい
+        html+=komaHTML(pc, isG(pc));
+      }
       html+='</td>';
     }
     html+="</tr>";
@@ -1705,7 +1726,7 @@ function dh(el,arr,pl){
   for(var k=0;k<ks.length;k++){
     var pc=ks[k],cnt=co[pc];
     var cls="hand-koma";
-    if(pl==="gote") cls+=" gote-hk";
+    var ownerOnTop=(furiResult&&!furiResult.temaeSente)?(pl==="sente"):(pl==="gote"); if(ownerOnTop) cls+=" gote-hk";
     if(sel&&sel.t==="h"&&sel.p===pc&&T===pl) cls+=" sel";
     h+='<div class="'+cls+'" data-hp="'+pc+'" data-pl="'+pl+'">';
     h+='<div class="koma-bg"></div>';
@@ -1833,8 +1854,7 @@ var $vid5Ov = document.getElementById("video-5no5");
 var $vid5 = document.getElementById("video-5no5-player");
 
 function play5no5Cutin(mover, callback){
-  cutinActive = true;
-  muteBGM();
+  beginCutin();
   $vid5Ov.classList.remove("cutin","cutout","gote-winner");
   var moverIsTop;
   if(furiResult && !furiResult.temaeSente){
@@ -1875,12 +1895,7 @@ function play5no5Cutin(mover, callback){
 
 function cleanup5no5(callback){
   $vid5Ov.classList.remove("show","cutin","cutout","gote-winner");
-  cutinActive = false;
-  if(endgameBgmStarted){
-    if(bgmEnabled) unmuteEndgameBGM();
-  } else {
-    if(bgmEnabled) unmuteBGM();
-  }
+  endCutin();
   if(callback) callback();
 }
 
@@ -1890,13 +1905,10 @@ var $vidEndTop = document.getElementById("endgame-video-top");
 var $vidEndBot = document.getElementById("endgame-video-bottom");
 
 function playEndgameCutin(){
-  cutinActive = true;
+  beginCutin();
   $vidEndOv.classList.remove("cutin","cutout");
   $vidEndOv.classList.add("show","cutin");
   playSound("cutin", 1.5);
-
-  // 通常BGMをミュート
-  muteBGM();
 
   // 両方の動画をミュートで準備
   $vidEndTop.muted = true;
@@ -1925,16 +1937,12 @@ function playEndgameCutin(){
     setTimeout(function(){
       $vidEndOv.classList.remove("show","cutin","cutout");
       cutinActive = false;
-      // 通常BGM完全停止
       stopBGM();
-      // 保留中の3分警告があれば再生、終了後に終盤BGM開始
       if(pending3minWarning){
         pending3minWarning = false;
-        muteEndgameBGM();
-        var src3 = playSound("nokori3", 2.0);
-        // 終盤BGMをまず開始（ミュート状態）
         startEndgameBGM();
         muteEndgameBGM();
+        var src3 = playSound("nokori3", 2.0);
         if(src3){
           src3.onended = function(){
             if(bgmEnabled) unmuteEndgameBGM();
@@ -2060,9 +2068,12 @@ function showReviewAt(idx){
   // 盤面を描画（読み取り専用）
   var $tbody=document.getElementById("tb");
   var html="";
-  for(var r=0;r<9;r++){
+  var flipped = furiResult && !furiResult.temaeSente;
+  for(var ri=0;ri<9;ri++){
     html+="<tr>";
-    for(var c=0;c<9;c++){
+    for(var ci=0;ci<9;ci++){
+      var r = flipped ? (8 - ri) : ri;
+      var c = flipped ? (8 - ci) : ci;
       var pc=snap.board[r][c];
       html+='<td>';
       if(pc) html+=komaHTML(pc, isG(pc));
@@ -2072,8 +2083,13 @@ function showReviewAt(idx){
   }
   $tbody.innerHTML=html;
   // 持ち駒を描画
-  drawReviewHand(document.getElementById("sh"), snap.hands.sente, "sente");
-  drawReviewHand(document.getElementById("gh"), snap.hands.gote, "gote");
+  if(furiResult && !furiResult.temaeSente){
+    drawReviewHand(document.getElementById("sh"), snap.hands.gote, "gote");
+    drawReviewHand(document.getElementById("gh"), snap.hands.sente, "sente");
+  } else {
+    drawReviewHand(document.getElementById("sh"), snap.hands.sente, "sente");
+    drawReviewHand(document.getElementById("gh"), snap.hands.gote, "gote");
+  }
   // 手番表示
   var $si=document.getElementById("si");
   var $gi=document.getElementById("gi");
@@ -2112,7 +2128,7 @@ function drawReviewHand(el,arr,pl){
   for(var k=0;k<ks.length;k++){
     var pc=ks[k],cnt=co[pc];
     var cls="hand-koma";
-    if(pl==="gote") cls+=" gote-hk";
+    var ownerOnTop=(furiResult&&!furiResult.temaeSente)?(pl==="sente"):(pl==="gote"); if(ownerOnTop) cls+=" gote-hk";
     h+='<div class="'+cls+'">';
     h+='<div class="koma-bg"></div>';
     h+='<span class="koma-text">'+dn(pc)+'</span>';
@@ -2161,8 +2177,7 @@ for(var i=0; i<revBtns.length; i++){
 var $vidOv = document.getElementById("video-ov");
 
 function playResignVideo(winner){
-  cutinActive = true;
-  // BGMは handleResign の stopBGM() で既に止まっている
+  beginCutin();
   $vidOv.classList.remove("cutin","cutout","gote-winner");
   var winnerIsTop;
   if(furiResult && !furiResult.temaeSente){
@@ -2205,6 +2220,7 @@ function playResignVideo(winner){
 function cleanupVideo(winner){
   $vidOv.classList.remove("show","cutin","cutout","gote-winner");
   cutinActive = false;
+  // 投了後は勝ちダイアログ（BGM不要）
   showWinDialog(winner);
 }
 
@@ -2270,25 +2286,17 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     TIMER_TOTAL = selectedTime;
     init();
 
-    // 奥側が先手の場合、盤面を反転（先手の駒が上、後手の駒が下になる）
+    // 奥側先手の場合、ラベルを反転
     if(!furiResult.temaeSente){
-      // 盤面を180度回転
-      var flipped = [];
-      for(var r=8; r>=0; r--){
-        var row = [];
-        for(var c=8; c>=0; c--){
-          var p = B[r][c];
-          if(p){
-            // 先手⇔後手を入れ替え
-            p = (p === p.toUpperCase()) ? p.toLowerCase() : p.toUpperCase();
-          }
-          row.push(p);
-        }
-        flipped.push(row);
-      }
-      B = flipped;
-      snapshots = [];
-      takeSnapshot();
+      document.querySelector(".col-labels").innerHTML =
+        "<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>";
+      document.querySelector(".row-labels").innerHTML =
+        "<span>九</span><span>八</span><span>七</span><span>六</span><span>五</span><span>四</span><span>三</span><span>二</span><span>一</span>";
+    } else {
+      document.querySelector(".col-labels").innerHTML =
+        "<span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>";
+      document.querySelector(".row-labels").innerHTML =
+        "<span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>七</span><span>八</span><span>九</span>";
     }
 
     render();
