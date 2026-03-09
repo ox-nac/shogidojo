@@ -517,7 +517,6 @@ table.board td.cap::after {
 .furigoma-result { font-size: 22px; }
 .furi-btn { font-size: 24px; padding: 14px 48px; }
 .furi-desc { font-size: 16px !important; max-width: 420px !important; }
-.start-btn { font-size: 26px; padding: 16px 60px; }
 
 /* 盤面 */
 table.board td { width: 75px; height: 75px; }
@@ -742,23 +741,6 @@ body { padding: 12px 8px; }
 .furi-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); transform: translateY(-1px); }
 .furi-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 
-.start-btn {
-  padding: 12px 48px;
-  background: linear-gradient(135deg, #8B5E3C, #a06e48);
-  color: #e8d5b0;
-  border: 2px solid #c49a4a;
-  border-radius: 8px;
-  font-size: 20px;
-  font-weight: bold;
-  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  letter-spacing: 4px;
-  display: none;
-}
-.start-btn.show { display: inline-block; }
-.start-btn:hover { background: linear-gradient(135deg, #a06e48, #b88050); transform: translateY(-1px); }
-
 /* ゲーム画面は最初非表示 */
 .game-screen { display: none; }
 .game-screen.show { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
@@ -797,10 +779,9 @@ body { padding: 12px 8px; }
       <div class="furi-koma" id="fk4"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
     </div>
     <div class="furigoma-result" id="furi-result"></div>
-    <button class="furi-btn" id="furi-btn">振り駒</button>
+    <button class="furi-btn" id="furi-btn">振る</button>
   </div>
 
-  <button class="start-btn" id="start-btn">対局開始</button>
 </div>
 
 <!-- ===== ゲーム画面 ===== -->
@@ -1556,14 +1537,33 @@ var furiDone = false;
 
 document.getElementById("furi-btn").addEventListener("click", function(){
   var btn = this;
+
+  // === 状態2: 「対局開始」として押された場合 ===
+  if(furiDone && furiResult){
+    // ユーザータップの中で全メディアをアンロック（iPad Safari必須）
+    unlockAllMedia();
+
+    // ゲーム画面に名前を反映
+    document.getElementById("si").textContent = "☗ " + furiResult.sente;
+    document.getElementById("gi").textContent = "☖ " + furiResult.gote;
+    // 画面切り替え
+    document.getElementById("title-screen").style.display = "none";
+    document.getElementById("game-screen").classList.add("show");
+    init();
+    render();
+
+    // アンロック完了後にBGM開始（少し待つ）
+    setTimeout(function(){ startBGM(); }, 500);
+    return;
+  }
+
+  // === 状態1: 「振る」として押された場合 ===
   btn.disabled = true;
   furiDone = false;
   document.getElementById("furi-result").textContent = "";
-  document.getElementById("start-btn").classList.remove("show");
 
   // 5枚の駒を振る
   var pieces = document.querySelectorAll(".furi-koma");
-  // シェイクアニメーション開始
   for(var i=0; i<pieces.length; i++){
     pieces[i].classList.remove("landed","tokin");
     pieces[i].querySelector(".koma-text").textContent = "歩";
@@ -1575,7 +1575,6 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     var tokinCount = 0;
     var results = [];
     for(var i=0; i<5; i++){
-      // 各駒50%の確率で歩/と金
       var isTokin = Math.random() < 0.5;
       results.push(isTokin);
       if(isTokin) tokinCount++;
@@ -1600,9 +1599,6 @@ document.getElementById("furi-btn").addEventListener("click", function(){
               var name2 = document.getElementById("name2").value.trim() || "プレイヤー2";
               var resultEl = document.getElementById("furi-result");
 
-              // 公式ルール準拠：と金が多い(3枚以上)→振った側(プレイヤー1)が先手
-              // 歩が多い(3枚以上)→プレイヤー2が先手
-              // 5枚とも同じ → 振り直し（ここでは自動で振り直し扱いにせず結果表示）
               if(tokinCount >= 3){
                 furiResult = {sente: name1, gote: name2};
                 resultEl.textContent = "と金" + tokinCount + "枚 → " + name1 + " が先手！";
@@ -1611,7 +1607,8 @@ document.getElementById("furi-btn").addEventListener("click", function(){
                 resultEl.textContent = "歩" + (5 - tokinCount) + "枚 → " + name2 + " が先手！";
               }
               furiDone = true;
-              document.getElementById("start-btn").classList.add("show");
+              // ボタンを「対局開始」に変更
+              btn.textContent = "対局開始";
               btn.disabled = false;
             }, 200);
           }
@@ -1619,25 +1616,6 @@ document.getElementById("furi-btn").addEventListener("click", function(){
       })(i, results[i]);
     }
   }, 1000);
-});
-
-document.getElementById("start-btn").addEventListener("click", function(){
-  if(!furiResult) return;
-
-  // ユーザータップの中で全メディアをアンロック（iPad Safari必須）
-  unlockAllMedia();
-
-  // ゲーム画面に名前を反映
-  document.getElementById("si").textContent = "☗ " + furiResult.sente;
-  document.getElementById("gi").textContent = "☖ " + furiResult.gote;
-  // 画面切り替え
-  document.getElementById("title-screen").style.display = "none";
-  document.getElementById("game-screen").classList.add("show");
-  init();
-  render();
-
-  // アンロック完了後にBGM開始（少し待つ）
-  setTimeout(function(){ startBGM(); }, 500);
 });
 
 /* 検討モードの「新規対局」→タイトル画面に戻る */
@@ -1651,7 +1629,7 @@ document.getElementById("rev-exit").addEventListener("click", function(){
   furiDone = false;
   furiResult = null;
   document.getElementById("furi-result").textContent = "";
-  document.getElementById("start-btn").classList.remove("show");
+  document.getElementById("furi-btn").textContent = "振る";
   var pieces = document.querySelectorAll(".furi-koma");
   for(var i=0; i<pieces.length; i++){
     pieces[i].classList.remove("landed","tokin","shaking");
