@@ -1390,13 +1390,6 @@ function bp(p){return UNP[p]||p;}
 function cap(p){if(!p)return null;var b=UNP[p]||p;return isS(p)?b.toLowerCase():b.toUpperCase();}
 function cb(b){return b.map(function(r){return r.slice();});}
 
-// 駒の先後を入れ替え（大文字↔小文字、成り駒も対応）
-function flipPiece(p){
-  if(!p) return null;
-  if(isS(p)) return p.toLowerCase();
-  return p.toUpperCase();
-}
-
 function komaHTML(piece, isGotePiece){
   var cls="koma";
   if(isGotePiece) cls+=" gote";
@@ -1608,23 +1601,12 @@ function renderTimers(){
   var $sb=document.getElementById("sente-timer");
   var $gb=document.getElementById("gote-timer");
 
-  // sente-timer = 画面下部, gote-timer = 画面上部
-  // temaeSente=false → 先手タイマーを上、後手タイマーを下に表示
-  if(furiResult && !furiResult.temaeSente){
-    $st.textContent=formatTime(timerGote);  // 下=後手
-    $gt.textContent=formatTime(timerSente); // 上=先手
-    $sb.classList.toggle("active", T==="gote" && !over);
-    $gb.classList.toggle("active", T==="sente" && !over);
-    $sb.classList.toggle("danger", timerGote<=180);
-    $gb.classList.toggle("danger", timerSente<=180);
-  } else {
-    $st.textContent=formatTime(timerSente);
-    $gt.textContent=formatTime(timerGote);
-    $sb.classList.toggle("active", T==="sente" && !over);
-    $gb.classList.toggle("active", T==="gote" && !over);
-    $sb.classList.toggle("danger", timerSente<=180);
-    $gb.classList.toggle("danger", timerGote<=180);
-  }
+  $st.textContent=formatTime(timerSente);
+  $gt.textContent=formatTime(timerGote);
+  $sb.classList.toggle("active", T==="sente" && !over);
+  $gb.classList.toggle("active", T==="gote" && !over);
+  $sb.classList.toggle("danger", timerSente<=180);
+  $gb.classList.toggle("danger", timerGote<=180);
 }
 
 /* DOM */
@@ -1637,25 +1619,11 @@ var $ov=document.getElementById("ov");
 
 function render(){
   drawBoard();
-  if(furiResult && !furiResult.temaeSente){
-    dh($sh,H.gote,"gote");
-    dh($gh,H.sente,"sente");
-  } else {
-    dh($sh,H.sente,"sente");
-    dh($gh,H.gote,"gote");
-  }
-  // 手番表示: temaeSente=true → 下=先手, temaeSente=false → 下=後手
-  var bottomActive, topActive;
-  if(furiResult && !furiResult.temaeSente){
-    // 奥側が先手 → senteの番なら上がactive
-    bottomActive = (T==="gote");
-    topActive = (T==="sente");
-  } else {
-    // 手前側が先手(デフォルト) → senteの番なら下がactive
-    bottomActive = (T==="sente");
-    topActive = (T==="gote");
-  }
-  if(bottomActive){$si.classList.add("on");$gi.classList.remove("on");}
+  dh($sh,H.sente,"sente");
+  dh($gh,H.gote,"gote");
+  // 手番表示: 画面下=先手の駒, 画面上=後手の駒（常に固定）
+  // senteの番なら下がactive
+  if(T==="sente"){$si.classList.add("on");$gi.classList.remove("on");}
   else{$gi.classList.add("on");$si.classList.remove("on");}
   renderTimers();
   renderBanners();
@@ -1686,13 +1654,9 @@ function renderBanners(){
 
 function drawBoard(){
   var html="";
-  var flipped = furiResult && !furiResult.temaeSente;
-  for(var ri=0;ri<9;ri++){
+  for(var r=0;r<9;r++){
     html+="<tr>";
-    for(var ci=0;ci<9;ci++){
-      // flipped: 行を逆順(8→0)、列も逆順(8→0) で描画
-      var r = flipped ? (8 - ri) : ri;
-      var c = flipped ? (8 - ci) : ci;
+    for(var c=0;c<9;c++){
       var pc=B[r][c];
       var cls="";
       if(sel&&sel.t==="b"&&sel.r===r&&sel.c===c) cls+=" sel";
@@ -1700,12 +1664,7 @@ function drawBoard(){
       for(var m=0;m<mvs.length;m++){if(mvs[m][0]===r&&mvs[m][1]===c){isTgt=true;break;}}
       if(isTgt){cls+=pc?" cap":" mv";}
       html+='<td class="'+cls.trim()+'" data-r="'+r+'" data-c="'+c+'">';
-      if(pc){
-        // flipped時: 先手の駒(大文字)が画面下部=正位置、後手の駒(小文字)が画面上部=回転
-        // 通常時: 後手の駒(小文字)が画面上部=回転
-        // どちらも isG(pc) で正しい
-        html+=komaHTML(pc, isG(pc));
-      }
+      if(pc) html+=komaHTML(pc, isG(pc));
       html+='</td>';
     }
     html+="</tr>";
@@ -1726,7 +1685,7 @@ function dh(el,arr,pl){
   for(var k=0;k<ks.length;k++){
     var pc=ks[k],cnt=co[pc];
     var cls="hand-koma";
-    var ownerOnTop=(furiResult&&!furiResult.temaeSente)?(pl==="sente"):(pl==="gote"); if(ownerOnTop) cls+=" gote-hk";
+    if(pl==="gote") cls+=" gote-hk";
     if(sel&&sel.t==="h"&&sel.p===pc&&T===pl) cls+=" sel";
     h+='<div class="'+cls+'" data-hp="'+pc+'" data-pl="'+pl+'">';
     h+='<div class="koma-bg"></div>';
@@ -1856,13 +1815,7 @@ var $vid5 = document.getElementById("video-5no5-player");
 function play5no5Cutin(mover, callback){
   beginCutin();
   $vid5Ov.classList.remove("cutin","cutout","gote-winner");
-  var moverIsTop;
-  if(furiResult && !furiResult.temaeSente){
-    moverIsTop = (mover==="sente");
-  } else {
-    moverIsTop = (mover==="gote");
-  }
-  if(moverIsTop) $vid5Ov.classList.add("gote-winner");
+  if(mover==="gote") $vid5Ov.classList.add("gote-winner");
   $vid5Ov.classList.add("show","cutin");
   playSound("cutin", 1.5);
 
@@ -2025,14 +1978,7 @@ function showWinDialog(winner){
   stopBGM();
   stopEndgameBGM();
   $winText.textContent="あなたの勝ちです";
-  // 勝者が画面上部（奥側）にいるなら逆さまに表示
-  var winnerIsTop;
-  if(furiResult && !furiResult.temaeSente){
-    winnerIsTop = (winner==="sente"); // 奥=先手
-  } else {
-    winnerIsTop = (winner==="gote"); // 奥=後手
-  }
-  if(winnerIsTop){
+  if(winner==="gote"){
     $winOv.classList.add("gote-win");
   } else {
     $winOv.classList.remove("gote-win");
@@ -2068,12 +2014,9 @@ function showReviewAt(idx){
   // 盤面を描画（読み取り専用）
   var $tbody=document.getElementById("tb");
   var html="";
-  var flipped = furiResult && !furiResult.temaeSente;
-  for(var ri=0;ri<9;ri++){
+  for(var r=0;r<9;r++){
     html+="<tr>";
-    for(var ci=0;ci<9;ci++){
-      var r = flipped ? (8 - ri) : ri;
-      var c = flipped ? (8 - ci) : ci;
+    for(var c=0;c<9;c++){
       var pc=snap.board[r][c];
       html+='<td>';
       if(pc) html+=komaHTML(pc, isG(pc));
@@ -2083,25 +2026,12 @@ function showReviewAt(idx){
   }
   $tbody.innerHTML=html;
   // 持ち駒を描画
-  if(furiResult && !furiResult.temaeSente){
-    drawReviewHand(document.getElementById("sh"), snap.hands.gote, "gote");
-    drawReviewHand(document.getElementById("gh"), snap.hands.sente, "sente");
-  } else {
-    drawReviewHand(document.getElementById("sh"), snap.hands.sente, "sente");
-    drawReviewHand(document.getElementById("gh"), snap.hands.gote, "gote");
-  }
+  drawReviewHand(document.getElementById("sh"), snap.hands.sente, "sente");
+  drawReviewHand(document.getElementById("gh"), snap.hands.gote, "gote");
   // 手番表示
   var $si=document.getElementById("si");
   var $gi=document.getElementById("gi");
-  var bActive, tActive;
-  if(furiResult && !furiResult.temaeSente){
-    bActive = (snap.turn==="gote");
-    tActive = (snap.turn==="sente");
-  } else {
-    bActive = (snap.turn==="sente");
-    tActive = (snap.turn==="gote");
-  }
-  if(bActive){$si.classList.add("on");$gi.classList.remove("on");}
+  if(snap.turn==="sente"){$si.classList.add("on");$gi.classList.remove("on");}
   else{$gi.classList.add("on");$si.classList.remove("on");}
   // 情報（両方のバーを更新）
   var infoText = idx+"手目 / "+(snapshots.length-1)+"手";
@@ -2128,7 +2058,7 @@ function drawReviewHand(el,arr,pl){
   for(var k=0;k<ks.length;k++){
     var pc=ks[k],cnt=co[pc];
     var cls="hand-koma";
-    var ownerOnTop=(furiResult&&!furiResult.temaeSente)?(pl==="sente"):(pl==="gote"); if(ownerOnTop) cls+=" gote-hk";
+    if(pl==="gote") cls+=" gote-hk";
     h+='<div class="'+cls+'">';
     h+='<div class="koma-bg"></div>';
     h+='<span class="koma-text">'+dn(pc)+'</span>';
@@ -2179,13 +2109,7 @@ var $vidOv = document.getElementById("video-ov");
 function playResignVideo(winner){
   beginCutin();
   $vidOv.classList.remove("cutin","cutout","gote-winner");
-  var winnerIsTop;
-  if(furiResult && !furiResult.temaeSente){
-    winnerIsTop = (winner==="sente");
-  } else {
-    winnerIsTop = (winner==="gote");
-  }
-  if(winnerIsTop) $vidOv.classList.add("gote-winner");
+  if(winner==="gote") $vidOv.classList.add("gote-winner");
 
   $vidOv.classList.add("show","cutin");
   playSound("cutin", 1.5);
@@ -2227,33 +2151,23 @@ function cleanupVideo(winner){
 function handleResign(who){
   if(over) return;
   var winner = who==="sente" ? "gote" : "sente";
-  // 勝者の名前を取得（位置を考慮）
-  var winnerName;
-  if(furiResult && !furiResult.temaeSente){
-    // 奥=先手, 手前=後手
-    winnerName = winner==="sente" ? document.getElementById("gi-name").textContent : document.getElementById("si-name").textContent;
-  } else {
-    // 手前=先手, 奥=後手
-    winnerName = winner==="sente" ? document.getElementById("si-name").textContent : document.getElementById("gi-name").textContent;
-  }
+  var winnerName = winner==="sente" ? document.getElementById("si-name").textContent : document.getElementById("gi-name").textContent;
   over = winnerName + " の勝ち";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
   stopBGM();
+  stopEndgameBGM();
   render();
   playResignVideo(winner);
 }
 
-// 投了ボタン — クリックイベント内で直接実行（iPad対策）
-// resign-sente = 画面下部（手前側）のボタン, resign-gote = 画面上部（奥側）のボタン
+// 投了ボタン — 画面下部=先手, 画面上部=後手
 document.getElementById("resign-sente").addEventListener("click",function(){
   playButtonSound();
-  var who = (furiResult && !furiResult.temaeSente) ? "gote" : "sente";
-  handleResign(who);
+  handleResign("sente");
 });
 document.getElementById("resign-gote").addEventListener("click",function(){
   playButtonSound();
-  var who = (furiResult && !furiResult.temaeSente) ? "sente" : "gote";
-  handleResign(who);
+  handleResign("gote");
 });
 
 /* 起動 */
@@ -2270,35 +2184,15 @@ document.getElementById("furi-btn").addEventListener("click", function(){
   // === 状態2: 「対局開始」として押された場合 ===
   if(furiDone && furiResult){
     playButtonSound();
-    if(furiResult.temaeSente){
-      document.querySelector("#si .turn-role").textContent = "☗ 先手";
-      document.getElementById("si-name").textContent = furiResult.sente;
-      document.querySelector("#gi .turn-role").textContent = "☖ 後手";
-      document.getElementById("gi-name").textContent = furiResult.gote;
-    } else {
-      document.querySelector("#si .turn-role").textContent = "☖ 後手";
-      document.getElementById("si-name").textContent = furiResult.gote;
-      document.querySelector("#gi .turn-role").textContent = "☗ 先手";
-      document.getElementById("gi-name").textContent = furiResult.sente;
-    }
+    // 画面下部=常に先手, 画面上部=常に後手
+    document.querySelector("#si .turn-role").textContent = "☗ 先手";
+    document.getElementById("si-name").textContent = furiResult.sente;
+    document.querySelector("#gi .turn-role").textContent = "☖ 後手";
+    document.getElementById("gi-name").textContent = furiResult.gote;
     document.getElementById("title-screen").style.display = "none";
     document.getElementById("game-screen").classList.add("show");
     TIMER_TOTAL = selectedTime;
     init();
-
-    // 奥側先手の場合、ラベルを反転
-    if(!furiResult.temaeSente){
-      document.querySelector(".col-labels").innerHTML =
-        "<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>";
-      document.querySelector(".row-labels").innerHTML =
-        "<span>九</span><span>八</span><span>七</span><span>六</span><span>五</span><span>四</span><span>三</span><span>二</span><span>一</span>";
-    } else {
-      document.querySelector(".col-labels").innerHTML =
-        "<span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>";
-      document.querySelector(".row-labels").innerHTML =
-        "<span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>七</span><span>八</span><span>九</span>";
-    }
-
     render();
 
     unlockAudio(function(){
