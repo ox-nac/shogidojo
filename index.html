@@ -1950,8 +1950,9 @@ function endT(){
   var nx=T==="sente"?"gote":"sente";T=nx;
   takeSnapshot();
   chk=ich(B,nx);
-  if(chk) playOuteSound();
   chkEnd(nx);
+  // 王手音は詰みでないときだけ（詰みのときは勝利音が鳴る）
+  if(chk && !over) playOuteSound();
   render();
   if(!over && !timerInterval) startTimer();
 }
