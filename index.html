@@ -873,6 +873,7 @@ body { padding: 12px 8px; }
 <audio id="snd-oute" src="oute.mp3" preload="auto"></audio>
 <audio id="snd-win" src="shorisengen.mp3" preload="auto"></audio>
 <audio id="snd-bgm" src="bgm.mp3" preload="auto" loop></audio>
+<audio id="snd-start" src="start.mp3" preload="auto"></audio>
 
 <script>
 (function(){
@@ -909,12 +910,12 @@ var outeSound = document.getElementById("snd-oute");
 var winSound = document.getElementById("snd-win");
 var bgm = document.getElementById("snd-bgm");
 var touryouVideo = document.getElementById("touryou-video");
+var startSound = document.getElementById("snd-start");
 var bgmStarted = false;
 
 /* 全メディアをアンロック（ユーザータップ内で呼ぶ） */
 function unlockAllMedia(){
-  // 音声のみアンロック（動画は投了ボタンのタップ時に直接再生するのでここでは不要）
-  var audioList = [komaSound, outeSound, winSound, bgm];
+  var audioList = [komaSound, outeSound, winSound, bgm, startSound];
   for(var i=0; i<audioList.length; i++){
     var m = audioList[i];
     if(m){
@@ -1551,8 +1552,11 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     init();
     render();
 
-    // アンロック完了後にBGM開始（少し待つ）
-    setTimeout(function(){ startBGM(); }, 500);
+    // アンロック完了後に対局開始音声→BGM開始
+    setTimeout(function(){
+      if(startSound){ startSound.currentTime=0; startSound.play().catch(function(){}); }
+      startBGM();
+    }, 500);
     return;
   }
 
