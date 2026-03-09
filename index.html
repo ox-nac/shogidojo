@@ -955,7 +955,7 @@ body { padding: 8px 4px; }
       <button class="time-btn" data-time="180">3分</button>
       <button class="time-btn" data-time="300">5分</button>
       <button class="time-btn selected" data-time="600">10分</button>
-      <button class="time-btn" data-time="10" data-byoyomi="true">10秒</button>
+      <button class="time-btn" data-time="11" data-byoyomi="true">10秒</button>
     </div>
   </div>
 
@@ -1134,7 +1134,7 @@ var INIT=[
 var TIMER_TOTAL = 600;
 var selectedTime = 600;
 var byoyomiMode = false;
-var BYOYOMI_SEC = 10;
+var BYOYOMI_SEC = 11;
 
 /* ===== Web Audio API サウンドシステム ===== */
 var audioCtx = null;
@@ -1544,6 +1544,8 @@ function init(){
 
 /* タイマー */
 function formatTime(sec){
+  // 秒読みモード: 表示は最大10秒（11秒目は溜めなので見せない）
+  if(byoyomiMode && sec > 10) sec = 10;
   var m=Math.floor(sec/60);
   var s=sec%60;
   return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
