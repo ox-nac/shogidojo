@@ -1156,7 +1156,8 @@ var soundFiles = {
   endgame_bgm: "endgame_bgm.mp3",
   nokori5: "nokori5.mp3",
   nokori3: "nokori3.mp3",
-  nokori1: "nokori1.mp3"
+  nokori1: "nokori1.mp3",
+  countdown: "countdown.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1229,6 +1230,7 @@ var cutinActive = false;
 
 function beginCutin(){
   cutinActive = true;
+  stopCountdown();
   muteBGM();
   muteEndgameBGM();
 }
@@ -1238,6 +1240,8 @@ function endCutin(){
     if(endgameBgmStarted) unmuteEndgameBGM();
     else if(bgmStarted) unmuteBGM();
   }
+  // 秒読みカウントダウン再開
+  if(byoyomiMode && !over) startCountdown();
 }
 
 function playKomaSound(){ playSound("koma", 3.5); }
@@ -1245,6 +1249,23 @@ function playOuteSound(){ playSound("oute"); }
 function playWinSound(){ playSound("win"); }
 function playStartSound(){ playSound("start"); }
 function playButtonSound(){ playSound("button", 1.5); }
+
+/* 秒読みカウントダウン音声 */
+var countdownSource = null;
+function startCountdown(){
+  stopCountdown();
+  if(!audioCtx || !audioBuffers.countdown) return;
+  countdownSource = audioCtx.createBufferSource();
+  countdownSource.buffer = audioBuffers.countdown;
+  countdownSource.connect(audioCtx.destination);
+  countdownSource.start(0);
+}
+function stopCountdown(){
+  if(countdownSource){
+    try{ countdownSource.stop(); }catch(e){}
+    countdownSource = null;
+  }
+}
 
 function playNokori5(){
   // BGMを一時ミュート
@@ -1538,7 +1559,7 @@ function startTimer(){
       timerSente--;
       if(timerSente<=0){
         timerSente=0;
-        // 先手の時間切れ→後手の勝ち
+        stopCountdown();
         var winner="gote";
         var wn=(furiResult&&!furiResult.temaeSente)?document.getElementById("si-name").textContent:document.getElementById("gi-name").textContent;
         over=wn+" の勝ち";
@@ -1552,7 +1573,7 @@ function startTimer(){
       timerGote--;
       if(timerGote<=0){
         timerGote=0;
-        // 後手の時間切れ→先手の勝ち
+        stopCountdown();
         var winner="sente";
         var wn=(furiResult&&!furiResult.temaeSente)?document.getElementById("gi-name").textContent:document.getElementById("si-name").textContent;
         over=wn+" の勝ち";
@@ -1941,8 +1962,9 @@ function endT(){
   sel=null;mvs=[];prm=null;
   playKomaSound();
 
-  // 秒読みモード: 指した側のタイマーをリセット
+  // 秒読みモード: 指した側のタイマーをリセット＋カウントダウン再開
   if(byoyomiMode){
+    stopCountdown();
     if(T==="sente") timerSente = BYOYOMI_SEC;
     else timerGote = BYOYOMI_SEC;
   }
@@ -1951,10 +1973,12 @@ function endT(){
   takeSnapshot();
   chk=ich(B,nx);
   chkEnd(nx);
-  // 王手音は詰みでないときだけ（詰みのときは勝利音が鳴る）
   if(chk && !over) playOuteSound();
   render();
   if(!over && !timerInterval) startTimer();
+
+  // 秒読みカウントダウン再開（詰みや終了でなければ）
+  if(byoyomiMode && !over) startCountdown();
 }
 
 function chkEnd(tn){
@@ -2175,6 +2199,7 @@ function handleResign(who){
   var winnerName = winner==="sente" ? document.getElementById("si-name").textContent : document.getElementById("gi-name").textContent;
   over = winnerName + " の勝ち";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  stopCountdown();
   stopBGM();
   stopEndgameBGM();
   render();
