@@ -2252,6 +2252,28 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     document.getElementById("game-screen").classList.add("show");
     TIMER_TOTAL = selectedTime;
     init();
+
+    // 奥側が先手の場合、盤面を反転（先手の駒が上、後手の駒が下になる）
+    if(!furiResult.temaeSente){
+      // 盤面を180度回転
+      var flipped = [];
+      for(var r=8; r>=0; r--){
+        var row = [];
+        for(var c=8; c>=0; c--){
+          var p = B[r][c];
+          if(p){
+            // 先手⇔後手を入れ替え
+            p = (p === p.toUpperCase()) ? p.toLowerCase() : p.toUpperCase();
+          }
+          row.push(p);
+        }
+        flipped.push(row);
+      }
+      B = flipped;
+      snapshots = [];
+      takeSnapshot();
+    }
+
     render();
 
     unlockAudio(function(){
