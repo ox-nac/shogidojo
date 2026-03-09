@@ -529,37 +529,54 @@ table.board td.cap::after {
 .video-overlay-dual .dual-video-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   align-items: center;
+  width: 100vw;
+  height: 100vh;
 }
 .dual-video-top, .dual-video-bottom {
-  max-width: 75vw;
-  max-height: 32vh;
-  border-radius: 6px;
+  width: 100vw;
+  height: 50vh;
   overflow: hidden;
-  box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 15px rgba(200,80,50,0.2);
-  border: 2px solid rgba(200,80,50,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .dual-video-top video, .dual-video-bottom video {
   width: 100%;
+  min-height: 100%;
+  object-fit: cover;
   display: block;
 }
+/* 奥側（上）は180度回転 */
 .dual-video-top {
   transform: rotate(180deg);
 }
 
-/* カットインアニメーション（デュアル） */
-.video-overlay-dual.cutin .dual-video-top {
-  animation: cutinSlideGote 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
+/* カットイン（手前=左から、奥=右から＝回転しているので逆） */
 .video-overlay-dual.cutin .dual-video-bottom {
   animation: cutinSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-.video-overlay-dual.cutout .dual-video-top {
-  animation: cutoutSlideGote 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+.video-overlay-dual.cutin .dual-video-top {
+  animation: cutinFromRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+@keyframes cutinFromRight {
+  0% { transform: translateX(110vw) scale(0.8) rotate(180deg); }
+  70% { transform: translateX(-3vw) scale(1.02) rotate(180deg); }
+  100% { transform: translateX(0) scale(1) rotate(180deg); }
+}
+
+/* カットアウト（手前=右へ、奥=左へ＝回転しているので逆） */
 .video-overlay-dual.cutout .dual-video-bottom {
   animation: cutoutSlide 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+.video-overlay-dual.cutout .dual-video-top {
+  animation: cutoutToLeft 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+@keyframes cutoutToLeft {
+  0% { transform: translateX(0) scale(1) rotate(180deg); }
+  30% { transform: translateX(3vw) scale(1.02) rotate(180deg); }
+  100% { transform: translateX(-110vw) scale(0.8) rotate(180deg); }
 }
 
 .warning-toast {
@@ -1082,7 +1099,10 @@ var soundFiles = {
   start: "start.mp3",
   cutin: "cutin.mp3",
   button: "button.mp3",
-  endgame_bgm: "endgame_bgm.mp3"
+  endgame_bgm: "endgame_bgm.mp3",
+  nokori5: "nokori5.mp3",
+  nokori3: "nokori3.mp3",
+  nokori1: "nokori1.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1159,6 +1179,50 @@ function playWinSound(){ playSound("win"); }
 function playStartSound(){ playSound("start"); }
 function playButtonSound(){ playSound("button", 1.5); }
 
+function playNokori5(){
+  // BGMを一時ミュート
+  muteBGM();
+  muteEndgameBGM();
+  var src = playSound("nokori5", 2.0);
+  if(src){
+    src.onended = function(){
+      if(bgmEnabled){
+        if(endgameBgmStarted) unmuteEndgameBGM();
+        else if(bgmStarted) unmuteBGM();
+      }
+    };
+  }
+}
+
+function playNokori3(){
+  // BGMを一時ミュート
+  muteBGM();
+  muteEndgameBGM();
+  var src = playSound("nokori3", 2.0);
+  if(src){
+    src.onended = function(){
+      if(bgmEnabled){
+        if(endgameBgmStarted) unmuteEndgameBGM();
+        else if(bgmStarted) unmuteBGM();
+      }
+    };
+  }
+}
+
+function playNokori1(){
+  muteBGM();
+  muteEndgameBGM();
+  var src = playSound("nokori1", 2.0);
+  if(src){
+    src.onended = function(){
+      if(bgmEnabled){
+        if(endgameBgmStarted) unmuteEndgameBGM();
+        else if(bgmStarted) unmuteBGM();
+      }
+    };
+  }
+}
+
 // BGM（ループ再生）
 var bgmGain = null;
 function startBGM(){
@@ -1195,6 +1259,13 @@ var endgameBgmSource = null;
 var endgameBgmGain = null;
 var endgameBgmStarted = false;
 var endgameCutinDone = false;
+var sente5minWarned = false;
+var gote5minWarned = false;
+var sente3minWarned = false;
+var gote3minWarned = false;
+var pending3minWarning = false;
+var sente1minWarned = false;
+var gote1minWarned = false;
 
 function startEndgameBGM(){
   if(!audioCtx || !audioBuffers.endgame_bgm || endgameBgmStarted) return;
@@ -1365,6 +1436,13 @@ function init(){
   if(rbg) rbg.classList.remove("show");
   stopEndgameBGM();
   endgameCutinDone = false;
+  sente5minWarned = false;
+  gote5minWarned = false;
+  sente3minWarned = false;
+  gote3minWarned = false;
+  pending3minWarning = false;
+  sente1minWarned = false;
+  gote1minWarned = false;
 }
 
 /* タイマー */
@@ -1409,6 +1487,41 @@ function startTimer(){
     }
     renderTimers();
     if(over) renderBanners();
+
+    // 残り5分切り警告（各プレイヤー1回ずつ）
+    if(!sente5minWarned && timerSente<=300 && timerSente>0){
+      sente5minWarned = true;
+      playNokori5();
+    }
+    if(!gote5minWarned && timerGote<=300 && timerGote>0){
+      gote5minWarned = true;
+      playNokori5();
+    }
+
+    // 残り3分切り警告（各プレイヤー1回ずつ、カットイン中は保留）
+    if(!sente3minWarned && timerSente<=180 && timerSente>0){
+      sente3minWarned = true;
+      pending3minWarning = true;
+    }
+    if(!gote3minWarned && timerGote<=180 && timerGote>0){
+      gote3minWarned = true;
+      pending3minWarning = true;
+    }
+    // カットイン中でなければ保留中の3分警告を再生
+    if(pending3minWarning && !cutinActive){
+      pending3minWarning = false;
+      playNokori3();
+    }
+
+    // 残り1分切り警告（各プレイヤー1回ずつ）
+    if(!sente1minWarned && timerSente<=60 && timerSente>0){
+      sente1minWarned = true;
+      playNokori1();
+    }
+    if(!gote1minWarned && timerGote<=60 && timerGote>0){
+      gote1minWarned = true;
+      playNokori1();
+    }
 
     // 両者3分切りチェック
     if(!endgameCutinDone && timerSente<=180 && timerGote<=180){
@@ -1741,16 +1854,31 @@ function playEndgameCutin(){
     $vidEndBot.play().catch(function(){});
   }, 600);
 
-  // 動画終了 → カットアウト → 終盤BGM開始
+  // 動画終了 → カットアウト → 3分警告 → 終盤BGM開始
   $vidEndBot.onended = function(){
     $vidEndOv.classList.remove("cutin");
     $vidEndOv.classList.add("cutout");
     setTimeout(function(){
       $vidEndOv.classList.remove("show","cutin","cutout");
       cutinActive = false;
-      // 通常BGM完全停止 → 終盤BGM開始
+      // 通常BGM完全停止
       stopBGM();
-      startEndgameBGM();
+      // 保留中の3分警告があれば再生、終了後に終盤BGM開始
+      if(pending3minWarning){
+        pending3minWarning = false;
+        muteEndgameBGM();
+        var src3 = playSound("nokori3", 2.0);
+        // 終盤BGMをまず開始（ミュート状態）
+        startEndgameBGM();
+        muteEndgameBGM();
+        if(src3){
+          src3.onended = function(){
+            if(bgmEnabled) unmuteEndgameBGM();
+          };
+        }
+      } else {
+        startEndgameBGM();
+      }
     }, 450);
   };
 
@@ -1758,7 +1886,19 @@ function playEndgameCutin(){
     $vidEndOv.classList.remove("show","cutin","cutout");
     cutinActive = false;
     stopBGM();
-    startEndgameBGM();
+    if(pending3minWarning){
+      pending3minWarning = false;
+      startEndgameBGM();
+      muteEndgameBGM();
+      var src3 = playSound("nokori3", 2.0);
+      if(src3){
+        src3.onended = function(){
+          if(bgmEnabled) unmuteEndgameBGM();
+        };
+      }
+    } else {
+      startEndgameBGM();
+    }
   };
 }
 
