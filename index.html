@@ -54,6 +54,17 @@ body {
 .turn-label.on { opacity: 1; border-color: #8B7355; }
 .gote-row .turn-label { transform: rotate(180deg); }
 
+.turn-role {
+  font-size: 11px;
+  opacity: 0.75;
+  letter-spacing: 1px;
+}
+.turn-name {
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-top: 1px;
+}
+
 /* 持ち駒エリア */
 .hand-area {
   display: flex;
@@ -161,7 +172,7 @@ body {
   font-weight: 900;
   color: #1a1408;
   line-height: 1;
-  margin-top: 14px;
+  margin-top: 8px;
   text-shadow: 0 0.5px 0 rgba(180,150,80,0.3);
   /* 筆文字風のレタリング */
   -webkit-text-stroke: 0.3px #2a1a08;
@@ -435,6 +446,11 @@ table.board td.cap::after {
 }
 .review-exit-btn:hover { background: linear-gradient(135deg, #7a2a2a, #943535); }
 
+/* 後手側検討バー（逆さま） */
+.review-bar-gote {
+  transform: rotate(180deg);
+}
+
 .review-overlay {
   display: none;
   position: absolute;
@@ -521,9 +537,9 @@ table.board td.cap::after {
 /* 盤面 */
 table.board td { width: 75px; height: 75px; }
 .koma { width: 60px; height: 68px; }
-.koma-text { font-size: 34px; margin-top: 18px; }
+.koma-text { font-size: 34px; margin-top: 12px; }
 .hand-koma { width: 56px; height: 64px; }
-.hand-koma .koma-text { font-size: 30px; margin-top: 16px; }
+.hand-koma .koma-text { font-size: 30px; margin-top: 10px; }
 .col-labels span { width: 75px; font-size: 16px; }
 .row-labels span { height: 75px; font-size: 16px; width: 24px; }
 .turn-label { font-size: 13px; padding: 3px 12px; }
@@ -545,9 +561,9 @@ body { padding: 12px 8px; }
 @media (min-width: 1100px) {
   table.board td { width: 64px; height: 64px; }
   .koma { width: 52px; height: 58px; }
-  .koma-text { font-size: 28px; margin-top: 16px; }
+  .koma-text { font-size: 28px; margin-top: 10px; }
   .hand-koma { width: 48px; height: 54px; }
-  .hand-koma .koma-text { font-size: 26px; margin-top: 14px; }
+  .hand-koma .koma-text { font-size: 26px; margin-top: 9px; }
   .col-labels span { width: 64px; font-size: 15px; }
   .row-labels span { height: 64px; font-size: 15px; }
 }
@@ -556,9 +572,9 @@ body { padding: 12px 8px; }
 @media (max-width: 600px) {
   table.board td { width: 40px; height: 40px; }
   .koma { width: 32px; height: 36px; }
-  .koma-text { font-size: 17px; margin-top: 10px; }
+  .koma-text { font-size: 17px; margin-top: 6px; }
   .hand-koma { width: 30px; height: 34px; }
-  .hand-koma .koma-text { font-size: 15px; margin-top: 9px; }
+  .hand-koma .koma-text { font-size: 15px; margin-top: 5px; }
   .col-labels span { width: 40px; font-size: 10px; }
   .row-labels span { height: 40px; font-size: 10px; }
   .timer-time { font-size: 15px; }
@@ -754,12 +770,13 @@ body { padding: 12px 8px; }
   <div class="title-sub">— 二人対戦 —</div>
 
   <div class="name-inputs">
+    <div style="text-align:center; font-size:16px; font-weight:bold; color:#c4a875; letter-spacing:3px; margin-bottom:4px;">プレイヤー名入力</div>
     <div class="name-row">
-      <span class="name-label">プレイヤー1</span>
+      <span class="name-label">手前側</span>
       <input class="name-input" id="name1" type="text" placeholder="名前を入力" maxlength="10">
     </div>
     <div class="name-row">
-      <span class="name-label">プレイヤー2</span>
+      <span class="name-label">奥側</span>
       <input class="name-input" id="name2" type="text" placeholder="名前を入力" maxlength="10">
     </div>
   </div>
@@ -768,8 +785,8 @@ body { padding: 12px 8px; }
     <div class="furigoma-title">振り駒</div>
     <div class="furi-desc" style="font-size:12px; color:#a09070; line-height:1.7; text-align:center; max-width:300px; margin-bottom:4px;">
       5枚の歩を振って先手・後手を決めます。<br>
-      「と」が多ければプレイヤー1が先手、<br>
-      「歩」が多ければプレイヤー2が先手になります。
+      「と」が多ければ手前側が先手、<br>
+      「歩」が多ければ奥側が先手になります。
     </div>
     <div class="furigoma-pieces" id="furi-pieces">
       <div class="furi-koma" id="fk0"><div class="koma-bg"></div><span class="koma-text">歩</span></div>
@@ -789,9 +806,22 @@ body { padding: 12px 8px; }
 
 <div class="board-area">
 
+  <!-- 後手側検討バー（逆さま） -->
+  <div class="review-bar review-bar-gote" id="review-bar-gote">
+    <button class="review-btn rev-g" data-action="first">⏮</button>
+    <button class="review-btn rev-g" data-action="prev">◀</button>
+    <span class="review-info" id="rev-info-gote">0 / 0</span>
+    <button class="review-btn rev-g" data-action="next">▶</button>
+    <button class="review-btn rev-g" data-action="last">⏭</button>
+    <button class="review-exit-btn rev-g" data-action="exit">新規対局</button>
+  </div>
+
   <!-- 後手（上・逆さま） -->
   <div class="player-row gote-row">
-    <div id="gi" class="turn-label">☖ 後手</div>
+    <div id="gi" class="turn-label">
+      <div class="turn-role">☖ 後手</div>
+      <div class="turn-name" id="gi-name"></div>
+    </div>
     <div id="gote-timer" class="timer-box">
       <span class="timer-icon">⏱</span>
       <span class="timer-time" id="gote-time">10:00</span>
@@ -817,7 +847,10 @@ body { padding: 12px 8px; }
 
   <!-- 先手（下・正位置） -->
   <div class="player-row sente-row">
-    <div id="si" class="turn-label on">☗ 先手</div>
+    <div id="si" class="turn-label on">
+      <div class="turn-role">☗ 先手</div>
+      <div class="turn-name" id="si-name"></div>
+    </div>
     <div id="sente-timer" class="timer-box active">
       <span class="timer-icon">⏱</span>
       <span class="timer-time" id="sente-time">10:00</span>
@@ -826,14 +859,14 @@ body { padding: 12px 8px; }
     <button class="resign-btn" id="resign-sente">投了</button>
   </div>
 
-  <!-- 検討バー -->
-  <div class="review-bar" id="review-bar">
-    <button class="review-btn" id="rev-first">⏮</button>
-    <button class="review-btn" id="rev-prev">◀</button>
+  <!-- 先手側検討バー -->
+  <div class="review-bar review-bar-sente" id="review-bar">
+    <button class="review-btn rev-s" data-action="first">⏮</button>
+    <button class="review-btn rev-s" data-action="prev">◀</button>
     <span class="review-info" id="rev-info">0 / 0</span>
-    <button class="review-btn" id="rev-next">▶</button>
-    <button class="review-btn" id="rev-last">⏭</button>
-    <button class="review-exit-btn" id="rev-exit">新規対局</button>
+    <button class="review-btn rev-s" data-action="next">▶</button>
+    <button class="review-btn rev-s" data-action="last">⏭</button>
+    <button class="review-exit-btn rev-s" data-action="exit">新規対局</button>
   </div>
 
 </div>
@@ -899,41 +932,67 @@ var INIT=[
 
 var TIMER_TOTAL = 10 * 60; // 10分（秒）
 
-/* ===== Web Audio API ベースのサウンドシステム（iPad Safari対応） ===== */
+/* ===== Web Audio API サウンドシステム ===== */
 var audioCtx = null;
 var audioBuffers = {};
 var bgmSource = null;
 var bgmStarted = false;
-var audioUnlocked = false;
+var soundsLoaded = false;
+var pendingAfterUnlock = null;
 
-// AudioContextを初期化（ユーザータップ内で呼ぶ）
-function initAudioContext(){
-  if(audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// 音声ファイルURLリスト
+var soundFiles = {
+  koma: "shogikoma.mp3",
+  oute: "oute.mp3",
+  win: "shorisengen.mp3",
+  bgm: "bgm.mp3",
+  start: "start.mp3"
+};
+
+// 音声ファイルを読み込み＆デコード
+function loadAllSounds(callback){
+  var keys = Object.keys(soundFiles);
+  var loaded = 0;
+  var total = keys.length;
+  keys.forEach(function(name){
+    fetch(soundFiles[name])
+      .then(function(res){ return res.arrayBuffer(); })
+      .then(function(buf){ return audioCtx.decodeAudioData(buf); })
+      .then(function(decoded){
+        audioBuffers[name] = decoded;
+        loaded++;
+        if(loaded >= total){
+          soundsLoaded = true;
+          if(callback) callback();
+        }
+      })
+      .catch(function(){
+        loaded++;
+        if(loaded >= total){
+          soundsLoaded = true;
+          if(callback) callback();
+        }
+      });
+  });
 }
 
-// ユーザータップで AudioContext を resume（これが iPad Safari で最重要）
-function unlockAudio(){
-  if(audioUnlocked) return;
-  initAudioContext();
-  if(audioCtx.state === "suspended"){
-    audioCtx.resume();
+// ユーザータップで AudioContext 作成＆resume＆音声読み込み
+function unlockAudio(callback){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  audioUnlocked = true;
-}
-
-// 音声ファイルを fetch して AudioBuffer にデコード
-function loadSound(name, url){
-  fetch(url)
-    .then(function(res){ return res.arrayBuffer(); })
-    .then(function(buf){
-      initAudioContext();
-      return audioCtx.decodeAudioData(buf);
-    })
-    .then(function(decoded){
-      audioBuffers[name] = decoded;
-    })
-    .catch(function(){});
+  var doAfter = function(){
+    if(!soundsLoaded){
+      loadAllSounds(callback);
+    } else {
+      if(callback) callback();
+    }
+  };
+  if(audioCtx.state === "suspended"){
+    audioCtx.resume().then(doAfter).catch(doAfter);
+  } else {
+    doAfter();
+  }
 }
 
 // バッファから再生
@@ -945,6 +1004,11 @@ function playSound(name){
   source.start(0);
   return source;
 }
+
+function playKomaSound(){ playSound("koma"); }
+function playOuteSound(){ playSound("oute"); }
+function playWinSound(){ playSound("win"); }
+function playStartSound(){ playSound("start"); }
 
 // BGM（ループ再生）
 function startBGM(){
@@ -967,25 +1031,8 @@ function stopBGM(){
   bgmStarted = false;
 }
 
-// 全音声ファイルを読み込み
-function loadAllSounds(){
-  loadSound("koma", "shogikoma.mp3");
-  loadSound("oute", "oute.mp3");
-  loadSound("win", "shorisengen.mp3");
-  loadSound("bgm", "bgm.mp3");
-  loadSound("start", "start.mp3");
-}
-
-function playKomaSound(){ playSound("koma"); }
-function playOuteSound(){ playSound("oute"); }
-function playWinSound(){ playSound("win"); }
-function playStartSound(){ playSound("start"); }
-
-// 動画（HTML video要素をそのまま使う）
+// 動画
 var touryouVideo = document.getElementById("touryou-video");
-
-// ページ読み込み時に音声ファイルをフェッチ開始
-loadAllSounds();
 
 /* 警告トースト */
 var $warn = document.getElementById("warn");
@@ -1121,7 +1168,8 @@ function init(){
   if(ba) ba.classList.remove("review-mode");
   var rb=document.getElementById("review-bar");
   if(rb) rb.classList.remove("show");
-
+  var rbg=document.getElementById("review-bar-gote");
+  if(rbg) rbg.classList.remove("show");
 }
 
 /* タイマー */
@@ -1141,7 +1189,7 @@ function startTimer(){
       timerSente--;
       if(timerSente<=0){
         timerSente=0;
-        var gn=document.getElementById("gi").textContent.replace("☖ ","");
+        var gn=document.getElementById("gi-name").textContent;
         over=gn+" の勝ち";
         clearInterval(timerInterval);
         timerInterval=null;
@@ -1154,7 +1202,7 @@ function startTimer(){
       timerGote--;
       if(timerGote<=0){
         timerGote=0;
-        var sn=document.getElementById("si").textContent.replace("☗ ","");
+        var sn=document.getElementById("si-name").textContent;
         over=sn+" の勝ち";
         clearInterval(timerInterval);
         timerInterval=null;
@@ -1407,7 +1455,7 @@ function chkEnd(tn){
   }
   if(!found){
     var winner = tn==="sente" ? "gote" : "sente";
-    var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
+    var winnerName = winner==="sente" ? document.getElementById("si-name").textContent : document.getElementById("gi-name").textContent;
     over = chk ? winnerName + " の勝ち" : "引き分け";
     if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
 
@@ -1449,6 +1497,7 @@ function enterReviewMode(){
   reviewIdx=snapshots.length-1;
   document.querySelector(".board-area").classList.add("review-mode");
   document.getElementById("review-bar").classList.add("show");
+  document.getElementById("review-bar-gote").classList.add("show");
   showReviewAt(reviewIdx);
 }
 
@@ -1479,13 +1528,17 @@ function showReviewAt(idx){
   var $gi=document.getElementById("gi");
   if(snap.turn==="sente"){$si.classList.add("on");$gi.classList.remove("on");}
   else{$gi.classList.add("on");$si.classList.remove("on");}
-  // 情報
-  document.getElementById("rev-info").textContent=idx+"手目 / "+(snapshots.length-1)+"手";
-  // ボタン状態
-  document.getElementById("rev-first").disabled=(idx===0);
-  document.getElementById("rev-prev").disabled=(idx===0);
-  document.getElementById("rev-next").disabled=(idx>=snapshots.length-1);
-  document.getElementById("rev-last").disabled=(idx>=snapshots.length-1);
+  // 情報（両方のバーを更新）
+  var infoText = idx+"手目 / "+(snapshots.length-1)+"手";
+  document.getElementById("rev-info").textContent = infoText;
+  document.getElementById("rev-info-gote").textContent = infoText;
+  // ボタン状態（両方のバーのボタンを更新）
+  var allRevBtns = document.querySelectorAll("[data-action]");
+  for(var b=0; b<allRevBtns.length; b++){
+    var act = allRevBtns[b].getAttribute("data-action");
+    if(act==="first"||act==="prev") allRevBtns[b].disabled=(idx===0);
+    if(act==="next"||act==="last") allRevBtns[b].disabled=(idx>=snapshots.length-1);
+  }
   syncRowWidth();
 }
 
@@ -1510,10 +1563,38 @@ function drawReviewHand(el,arr,pl){
   el.innerHTML=h;
 }
 
-document.getElementById("rev-first").addEventListener("click",function(){ showReviewAt(0); });
-document.getElementById("rev-prev").addEventListener("click",function(){ showReviewAt(reviewIdx-1); });
-document.getElementById("rev-next").addEventListener("click",function(){ showReviewAt(reviewIdx+1); });
-document.getElementById("rev-last").addEventListener("click",function(){ showReviewAt(snapshots.length-1); });
+/* 検討バー統一ハンドラ（先手側・後手側両方） */
+function handleReviewAction(action){
+  if(action==="first") showReviewAt(0);
+  else if(action==="prev") showReviewAt(reviewIdx-1);
+  else if(action==="next") showReviewAt(reviewIdx+1);
+  else if(action==="last") showReviewAt(snapshots.length-1);
+  else if(action==="exit"){
+    reviewMode = false;
+    document.querySelector(".board-area").classList.remove("review-mode");
+    document.getElementById("review-bar").classList.remove("show");
+    document.getElementById("review-bar-gote").classList.remove("show");
+    document.getElementById("game-screen").classList.remove("show");
+    document.getElementById("title-screen").style.display = "flex";
+    furiDone = false;
+    furiResult = null;
+    document.getElementById("furi-result").textContent = "";
+    document.getElementById("furi-btn").textContent = "振る";
+    var pieces = document.querySelectorAll(".furi-koma");
+    for(var i=0; i<pieces.length; i++){
+      pieces[i].classList.remove("landed","tokin","shaking");
+      pieces[i].querySelector(".koma-text").textContent = "歩";
+    }
+  }
+}
+
+// 両方のバーのボタンにイベント設定
+var revBtns = document.querySelectorAll("[data-action]");
+for(var i=0; i<revBtns.length; i++){
+  revBtns[i].addEventListener("click", function(){
+    handleReviewAction(this.getAttribute("data-action"));
+  });
+}
 
 /* 投了 */
 /* 投了動画 */
@@ -1541,7 +1622,7 @@ function playResignVideo(winner){
 function handleResign(who){
   if(over) return;
   var winner = who==="sente" ? "gote" : "sente";
-  var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
+  var winnerName = winner==="sente" ? document.getElementById("si-name").textContent : document.getElementById("gi-name").textContent;
   over = winnerName + " の勝ち";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
   stopBGM();
@@ -1567,28 +1648,26 @@ document.getElementById("furi-btn").addEventListener("click", function(){
 
   // === 状態2: 「対局開始」として押された場合 ===
   if(furiDone && furiResult){
-    // ユーザータップの中でAudioContextをアンロック（iPad Safari必須）
-    unlockAudio();
-
     // ゲーム画面に名前を反映
-    document.getElementById("si").textContent = "☗ " + furiResult.sente;
-    document.getElementById("gi").textContent = "☖ " + furiResult.gote;
+    document.getElementById("si-name").textContent = furiResult.sente;
+    document.getElementById("gi-name").textContent = furiResult.gote;
     // 画面切り替え
     document.getElementById("title-screen").style.display = "none";
     document.getElementById("game-screen").classList.add("show");
     init();
     render();
 
-    // 少し待ってから対局開始音声→BGM開始
-    setTimeout(function(){
+    // AudioContextアンロック→音声読み込み完了→再生
+    unlockAudio(function(){
       playStartSound();
       startBGM();
-    }, 300);
+    });
     return;
   }
 
   // === 状態1: 「振る」として押された場合 ===
-  unlockAudio(); // 最初のタップでAudioContextをアンロック
+  // 最初のタップでAudioContextを作成＆音声読み込み開始
+  unlockAudio(null);
   btn.disabled = true;
   furiDone = false;
   document.getElementById("furi-result").textContent = "";
@@ -1626,8 +1705,8 @@ document.getElementById("furi-btn").addEventListener("click", function(){
           // 最後の駒が着地したら結果表示
           if(idx === 4){
             setTimeout(function(){
-              var name1 = document.getElementById("name1").value.trim() || "プレイヤー1";
-              var name2 = document.getElementById("name2").value.trim() || "プレイヤー2";
+              var name1 = document.getElementById("name1").value.trim() || "手前側";
+              var name2 = document.getElementById("name2").value.trim() || "奥側";
               var resultEl = document.getElementById("furi-result");
 
               if(tokinCount >= 3){
@@ -1647,25 +1726,6 @@ document.getElementById("furi-btn").addEventListener("click", function(){
       })(i, results[i]);
     }
   }, 1000);
-});
-
-/* 検討モードの「新規対局」→タイトル画面に戻る */
-document.getElementById("rev-exit").addEventListener("click", function(){
-  reviewMode = false;
-  document.querySelector(".board-area").classList.remove("review-mode");
-  document.getElementById("review-bar").classList.remove("show");
-  document.getElementById("game-screen").classList.remove("show");
-  document.getElementById("title-screen").style.display = "flex";
-  // 振り駒リセット
-  furiDone = false;
-  furiResult = null;
-  document.getElementById("furi-result").textContent = "";
-  document.getElementById("furi-btn").textContent = "振る";
-  var pieces = document.querySelectorAll(".furi-koma");
-  for(var i=0; i<pieces.length; i++){
-    pieces[i].classList.remove("landed","tokin","shaking");
-    pieces[i].querySelector(".koma-text").textContent = "歩";
-  }
 });
 
 window.addEventListener("resize", syncRowWidth);
