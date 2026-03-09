@@ -1024,7 +1024,7 @@ function startBGM(){
   bgmSource.buffer = audioBuffers.bgm;
   bgmSource.loop = true;
   var gain = audioCtx.createGain();
-  gain.gain.value = 0.12;
+  gain.gain.value = 0.06;
   bgmSource.connect(gain);
   gain.connect(audioCtx.destination);
   bgmSource.start(0);
