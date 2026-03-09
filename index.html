@@ -1098,25 +1098,34 @@ function playWinSound(){ playSound("win"); }
 function playStartSound(){ playSound("start"); }
 
 // BGM（ループ再生）
+var bgmGain = null;
 function startBGM(){
   if(!audioCtx || !audioBuffers.bgm || bgmStarted) return;
   if(typeof bgmEnabled !== "undefined" && !bgmEnabled) return;
   bgmSource = audioCtx.createBufferSource();
   bgmSource.buffer = audioBuffers.bgm;
   bgmSource.loop = true;
-  var gain = audioCtx.createGain();
-  gain.gain.value = 0.12;
-  bgmSource.connect(gain);
-  gain.connect(audioCtx.destination);
+  bgmGain = audioCtx.createGain();
+  bgmGain.gain.value = 0.12;
+  bgmSource.connect(bgmGain);
+  bgmGain.connect(audioCtx.destination);
   bgmSource.start(0);
   bgmStarted = true;
 }
 function stopBGM(){
+  // 完全停止（対局終了時など）
   if(bgmSource){
     try{ bgmSource.stop(); }catch(e){}
     bgmSource = null;
+    bgmGain = null;
   }
   bgmStarted = false;
+}
+function muteBGM(){
+  if(bgmGain) bgmGain.gain.value = 0;
+}
+function unmuteBGM(){
+  if(bgmGain) bgmGain.gain.value = 0.12;
 }
 
 // 動画
@@ -1918,17 +1927,21 @@ var bgmEnabled = true;
 document.getElementById("bgm-toggle").addEventListener("click", function(){
   var btn = this;
   if(bgmEnabled){
-    // OFFにする
-    stopBGM();
+    // OFFにする（ミュート、再生は続く）
+    muteBGM();
     bgmEnabled = false;
     btn.classList.remove("on");
     btn.classList.add("off");
   } else {
-    // ONにする
+    // ONにする（アンミュート、途中から再開）
     bgmEnabled = true;
     btn.classList.remove("off");
     btn.classList.add("on");
-    if(!over && !reviewMode) startBGM();
+    if(bgmStarted){
+      unmuteBGM();
+    } else if(!over && !reviewMode){
+      startBGM();
+    }
   }
 });
 
