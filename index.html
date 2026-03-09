@@ -980,6 +980,11 @@ body { padding: 8px 4px; }
   <video id="touryou-video" src="touryou.mp4" playsinline webkit-playsinline preload="auto" muted></video>
 </div>
 
+<!-- 5五カットイン -->
+<div class="video-overlay" id="video-5no5">
+  <video id="video-5no5-player" src="5no5.mp4" playsinline webkit-playsinline preload="auto" muted></video>
+</div>
+
 <!-- 音声はWeb Audio APIで管理 -->
 
 <script>
@@ -1026,7 +1031,8 @@ var soundFiles = {
   win: "shorisengen.mp3",
   bgm: "bgm.mp3",
   start: "start.mp3",
-  cutin: "cutin.mp3"
+  cutin: "cutin.mp3",
+  button: "button.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1096,6 +1102,7 @@ function playKomaSound(){ playSound("koma", 3.5); }
 function playOuteSound(){ playSound("oute"); }
 function playWinSound(){ playSound("win"); }
 function playStartSound(){ playSound("start"); }
+function playButtonSound(){ playSound("button", 1.5); }
 
 // BGM（ループ再生）
 var bgmGain = null;
@@ -1531,12 +1538,71 @@ function doMv(fr,fc,tr,tc,pr){
   var pc=B[fr][fc];var cp=B[tr][tc];
   if(cp){var c=cap(cp);if(c)H[T].push(c);}
   B[tr][tc]=pr?PRO[pc]:pc;B[fr][fc]=null;
-  endT();
+  if(tr===4 && tc===4){
+    play5no5Cutin(T, function(){ endT(); });
+  } else {
+    endT();
+  }
 }
 function doDrop(pc,tr,tc){
   B[tr][tc]=pc;
   var idx=H[T].indexOf(pc);if(idx>=0)H[T].splice(idx,1);
-  endT();
+  if(tr===4 && tc===4){
+    play5no5Cutin(T, function(){ endT(); });
+  } else {
+    endT();
+  }
+}
+
+/* 5五カットイン演出 */
+var $vid5Ov = document.getElementById("video-5no5");
+var $vid5 = document.getElementById("video-5no5-player");
+
+function play5no5Cutin(mover, callback){
+  $vid5Ov.classList.remove("cutin","cutout","gote-winner");
+  // 移動した側が画面上部（奥側）にいるなら逆さまに
+  var moverIsTop;
+  if(furiResult && !furiResult.temaeSente){
+    moverIsTop = (mover==="sente"); // 奥=先手
+  } else {
+    moverIsTop = (mover==="gote"); // 奥=後手
+  }
+  if(moverIsTop) $vid5Ov.classList.add("gote-winner");
+  $vid5Ov.classList.add("show","cutin");
+  playSound("cutin", 1.5);
+
+  // 動画はミュートで準備
+  $vid5.muted = true;
+  $vid5.currentTime = 0;
+  $vid5.play().catch(function(){});
+  $vid5.pause();
+
+  // カットイン後に動画音声開始
+  setTimeout(function(){
+    $vid5.muted = false;
+    $vid5.volume = 1;
+    $vid5.currentTime = 0;
+    $vid5.play().catch(function(){
+      cleanup5no5(callback);
+    });
+  }, 600);
+
+  $vid5.onended = function(){
+    $vid5Ov.classList.remove("cutin");
+    $vid5Ov.classList.add("cutout");
+    setTimeout(function(){
+      cleanup5no5(callback);
+    }, 450);
+  };
+
+  $vid5.onerror = function(){
+    cleanup5no5(callback);
+  };
+}
+
+function cleanup5no5(callback){
+  $vid5Ov.classList.remove("show","cutin","cutout","gote-winner");
+  if(callback) callback();
 }
 
 function endT(){
@@ -1579,8 +1645,8 @@ function chkEnd(tn){
 }
 
 /* ダイアログ */
-document.getElementById("py").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,true);});
-document.getElementById("pn").addEventListener("click",function(){if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,false);});
+document.getElementById("py").addEventListener("click",function(){playButtonSound();if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,true);});
+document.getElementById("pn").addEventListener("click",function(){playButtonSound();if(!prm)return;doMv(prm.fr,prm.fc,prm.tr,prm.tc,false);});
 
 /* 勝ちダイアログ */
 var $winOv=document.getElementById("win-ov");
@@ -1609,6 +1675,7 @@ function hideWinDialog(){
   $winOv.classList.remove("gote-win");
 }
 document.getElementById("win-ok").addEventListener("click",function(){
+  playButtonSound();
   hideWinDialog();
   enterReviewMode();
 });
@@ -1722,6 +1789,7 @@ function handleReviewAction(action){
 var revBtns = document.querySelectorAll("[data-action]");
 for(var i=0; i<revBtns.length; i++){
   revBtns[i].addEventListener("click", function(){
+    playButtonSound();
     handleReviewAction(this.getAttribute("data-action"));
   });
 }
@@ -1804,12 +1872,12 @@ function handleResign(who){
 // 投了ボタン — クリックイベント内で直接実行（iPad対策）
 // resign-sente = 画面下部（手前側）のボタン, resign-gote = 画面上部（奥側）のボタン
 document.getElementById("resign-sente").addEventListener("click",function(){
-  // 手前側の人が投了
+  playButtonSound();
   var who = (furiResult && !furiResult.temaeSente) ? "gote" : "sente";
   handleResign(who);
 });
 document.getElementById("resign-gote").addEventListener("click",function(){
-  // 奥側の人が投了
+  playButtonSound();
   var who = (furiResult && !furiResult.temaeSente) ? "sente" : "gote";
   handleResign(who);
 });
@@ -1823,6 +1891,7 @@ var furiResult = null; // {sente:"name", gote:"name"}
 var furiDone = false;
 
 document.getElementById("furi-btn").addEventListener("click", function(){
+  playButtonSound();
   var btn = this;
 
   // === 状態2: 「対局開始」として押された場合 ===
@@ -1925,6 +1994,7 @@ window.addEventListener("resize", syncRowWidth);
 /* BGMトグル */
 var bgmEnabled = true;
 document.getElementById("bgm-toggle").addEventListener("click", function(){
+  playButtonSound();
   var btn = this;
   if(bgmEnabled){
     // OFFにする（ミュート、再生は続く）
