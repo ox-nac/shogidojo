@@ -634,13 +634,13 @@ table.board td.cap::after {
 .name-heading { font-size: 24px !important; letter-spacing: 5px !important; }
 
 /* 盤面 */
-table.board td { width: 84px; height: 84px; }
-.koma { width: 68px; height: 76px; }
-.koma-text { font-size: 38px; margin-top: 14px; }
-.hand-koma { width: 62px; height: 70px; }
-.hand-koma .koma-text { font-size: 34px; margin-top: 12px; }
-.col-labels span { width: 84px; font-size: 17px; }
-.row-labels span { height: 84px; font-size: 17px; width: 26px; }
+table.board td { width: 80px; height: 80px; }
+.koma { width: 64px; height: 72px; }
+.koma-text { font-size: 36px; margin-top: 13px; }
+.hand-koma { width: 58px; height: 66px; }
+.hand-koma .koma-text { font-size: 32px; margin-top: 11px; }
+.col-labels span { width: 80px; font-size: 16px; }
+.row-labels span { height: 80px; font-size: 16px; width: 24px; }
 .turn-label { font-size: 13px; padding: 3px 12px; }
 .timer-time { font-size: 20px; }
 .timer-icon { font-size: 14px; }
@@ -901,31 +901,27 @@ body { padding: 8px 4px; }
 .game-screen { display: none; position: relative; }
 .game-screen.show { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
 
-/* BGMトグルボタン（左端中央・縦書き） */
-.bgm-toggle {
-  position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
-  transform-origin: center center;
-  padding: 6px 16px;
-  font-size: 12px;
+/* BGMトグルボタン（名前の下・横長） */
+.bgm-toggle-inline {
+  display: inline-block;
+  padding: 2px 12px;
+  font-size: 10px;
   font-weight: bold;
   font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   white-space: nowrap;
   background: rgba(80,50,25,0.6);
   color: #e8d5b0;
   border: 1px solid #8B7355;
-  border-radius: 0 0 6px 6px;
+  border-radius: 4px;
   cursor: pointer;
-  z-index: 50;
   transition: background 0.2s, opacity 0.2s;
+  margin-top: 2px;
 }
-.bgm-toggle:hover {
+.bgm-toggle-inline:hover {
   background: rgba(100,65,30,0.8);
 }
-.bgm-toggle.off {
+.bgm-toggle-inline.off {
   opacity: 0.4;
   text-decoration: line-through;
   background: rgba(40,25,15,0.5);
@@ -985,9 +981,6 @@ body { padding: 8px 4px; }
 <!-- ===== ゲーム画面 ===== -->
 <div class="game-screen" id="game-screen">
 
-<!-- BGMトグルボタン（左端中央） -->
-<button class="bgm-toggle on" id="bgm-toggle">♪ BGM</button>
-
 <div class="board-area">
 
   <!-- 後手側検討バー（逆さま） -->
@@ -1005,6 +998,7 @@ body { padding: 8px 4px; }
     <div id="gi" class="turn-label">
       <div class="turn-role">☖ 後手</div>
       <div class="turn-name" id="gi-name"></div>
+      <button class="bgm-toggle-inline on" id="bgm-toggle-gote">♪ BGM</button>
     </div>
     <div id="gote-timer" class="timer-box">
       <span class="timer-icon">⏱</span>
@@ -1034,6 +1028,7 @@ body { padding: 8px 4px; }
     <div id="si" class="turn-label on">
       <div class="turn-role">☗ 先手</div>
       <div class="turn-name" id="si-name"></div>
+      <button class="bgm-toggle-inline on" id="bgm-toggle-sente">♪ BGM</button>
     </div>
     <div id="sente-timer" class="timer-box active">
       <span class="timer-icon">⏱</span>
@@ -2365,23 +2360,23 @@ document.getElementById("furi-btn").addEventListener("click", function(){
 
 window.addEventListener("resize", syncRowWidth);
 
-/* BGMトグル */
+/* BGMトグル（両方のボタンを同期） */
 var bgmEnabled = true;
-document.getElementById("bgm-toggle").addEventListener("click", function(){
+var bgmBtnSente = document.getElementById("bgm-toggle-sente");
+var bgmBtnGote = document.getElementById("bgm-toggle-gote");
+
+function toggleBGM(){
   playButtonSound();
-  var btn = this;
   if(bgmEnabled){
-    // OFFにする（ミュート、再生は続く）
     muteBGM();
     muteEndgameBGM();
     bgmEnabled = false;
-    btn.classList.remove("on");
-    btn.classList.add("off");
+    bgmBtnSente.classList.remove("on"); bgmBtnSente.classList.add("off");
+    bgmBtnGote.classList.remove("on"); bgmBtnGote.classList.add("off");
   } else {
-    // ONにする（アンミュート、途中から再開）
     bgmEnabled = true;
-    btn.classList.remove("off");
-    btn.classList.add("on");
+    bgmBtnSente.classList.remove("off"); bgmBtnSente.classList.add("on");
+    bgmBtnGote.classList.remove("off"); bgmBtnGote.classList.add("on");
     if(endgameBgmStarted){
       unmuteEndgameBGM();
     } else if(bgmStarted){
@@ -2390,7 +2385,9 @@ document.getElementById("bgm-toggle").addEventListener("click", function(){
       startBGM();
     }
   }
-});
+}
+bgmBtnSente.addEventListener("click", toggleBGM);
+bgmBtnGote.addEventListener("click", toggleBGM);
 
 /* 持ち時間選択ボタン */
 var timeBtns = document.querySelectorAll(".time-btn");
