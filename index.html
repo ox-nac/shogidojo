@@ -2393,6 +2393,7 @@ bgmBtnGote.addEventListener("click", toggleBGM);
 var timeBtns = document.querySelectorAll(".time-btn");
 for(var i=0; i<timeBtns.length; i++){
   timeBtns[i].addEventListener("click", function(){
+    unlockAudio(null);
     playButtonSound();
     for(var j=0; j<timeBtns.length; j++) timeBtns[j].classList.remove("selected");
     this.classList.add("selected");
