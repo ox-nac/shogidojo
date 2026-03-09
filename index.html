@@ -887,15 +887,31 @@ body { padding: 8px 4px; }
   letter-spacing: 1px;
 }
 .time-btn:hover { background: rgba(100,65,30,0.7); }
-.time-btn.selected {
+.time-btn.selected, .mode-btn.selected {
   background: linear-gradient(135deg, #8B5E3C, #a06e48);
   border-color: #c49a4a;
   color: #fff;
 }
 
+.mode-btn {
+  padding: 10px 28px;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  background: rgba(80,50,25,0.5);
+  color: #e8d5b0;
+  border: 2px solid rgba(139,115,85,0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+.mode-btn:hover { background: rgba(100,65,30,0.7); }
+
 /* iPad用 */
 .time-select-title { font-size: 24px !important; letter-spacing: 5px !important; }
 .time-btn { font-size: 18px !important; padding: 8px 0 !important; width: 80px; text-align: center; }
+.mode-btn { font-size: 18px !important; padding: 8px 0 !important; width: 100px; text-align: center; }
 
 /* ゲーム画面は最初非表示 */
 .game-screen { display: none; position: relative; }
@@ -948,8 +964,18 @@ body { padding: 8px 4px; }
     </div>
   </div>
 
-  <!-- 持ち時間選択 -->
+  <!-- 対局形式選択 -->
   <div class="time-select-area">
+    <div class="time-select-title">対局形式</div>
+    <div class="time-select-btns">
+      <button class="mode-btn selected" data-mode="hirate">平手</button>
+      <button class="mode-btn" data-mode="kakuochi">角落ち</button>
+      <button class="mode-btn" data-mode="5sochi">5秒落ち</button>
+    </div>
+  </div>
+
+  <!-- 持ち時間選択 -->
+  <div class="time-select-area" id="time-select-area">
     <div class="time-select-title">持ち時間</div>
     <div class="time-select-btns">
       <button class="time-btn" data-time="180">3分</button>
@@ -1135,6 +1161,8 @@ var TIMER_TOTAL = 600;
 var selectedTime = 600;
 var byoyomiMode = false;
 var BYOYOMI_SEC = 11;
+var gameMode = "hirate"; // "hirate", "kakuochi", "5sochi"
+var BYOYOMI_5S = 6; // 5秒落ちの手前側タイマー（溜め1秒+5秒）
 
 /* ===== Web Audio API サウンドシステム ===== */
 var audioCtx = null;
@@ -1157,7 +1185,8 @@ var soundFiles = {
   nokori5: "nokori5.mp3",
   nokori3: "nokori3.mp3",
   nokori1: "nokori1.mp3",
-  countdown: "countdown.mp3"
+  countdown: "countdown.mp3",
+  countdown5: "countdown5.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1254,9 +1283,17 @@ function playButtonSound(){ playSound("button", 1.5); }
 var countdownSource = null;
 function startCountdown(){
   stopCountdown();
-  if(!audioCtx || !audioBuffers.countdown) return;
+  if(!audioCtx) return;
+  // 5秒落ち: 手前(sente)=countdown5、奥(gote)=countdown
+  var sndName;
+  if(gameMode === "5sochi" && T === "sente"){
+    sndName = "countdown5";
+  } else {
+    sndName = "countdown";
+  }
+  if(!audioBuffers[sndName]) return;
   countdownSource = audioCtx.createBufferSource();
-  countdownSource.buffer = audioBuffers.countdown;
+  countdownSource.buffer = audioBuffers[sndName];
   countdownSource.connect(audioCtx.destination);
   countdownSource.start(0);
 }
@@ -1514,6 +1551,12 @@ function takeSnapshot(){
 
 function init(){
   B=INIT.map(function(r){return r.slice();});
+
+  // 角落ち: 手前側(画面下部=大文字)の角を除く
+  if(gameMode === "kakuochi"){
+    B[7][1] = null; // 8八の角(B)を除去
+  }
+
   // 奥側が先手 → 上側(小文字の駒)が先に動く → ゲームロジック上は"gote"から
   T=(furiResult && !furiResult.temaeSente) ? "gote" : "sente";
   sel=null;mvs=[];H={sente:[],gote:[]};prm=null;over=null;chk=false;
@@ -1543,9 +1586,15 @@ function init(){
 }
 
 /* タイマー */
-function formatTime(sec){
-  // 秒読みモード: 表示は最大10秒（11秒目は溜めなので見せない）
-  if(byoyomiMode && sec > 10) sec = 10;
+function formatTime(sec, isSenteTimer){
+  // 秒読みモード: 表示を丸める
+  if(byoyomiMode){
+    if(gameMode === "5sochi" && isSenteTimer){
+      if(sec > 5) sec = 5;
+    } else {
+      if(sec > 10) sec = 10;
+    }
+  }
   var m=Math.floor(sec/60);
   var s=sec%60;
   return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
@@ -1638,8 +1687,8 @@ function renderTimers(){
   var $sb=document.getElementById("sente-timer");
   var $gb=document.getElementById("gote-timer");
 
-  $st.textContent=formatTime(timerSente);
-  $gt.textContent=formatTime(timerGote);
+  $st.textContent=formatTime(timerSente, true);
+  $gt.textContent=formatTime(timerGote, false);
   $sb.classList.toggle("active", T==="sente" && !over);
   $gb.classList.toggle("active", T==="gote" && !over);
   $sb.classList.toggle("danger", timerSente<=180);
@@ -1967,8 +2016,14 @@ function endT(){
   // 秒読みモード: 指した側のタイマーをリセット＋カウントダウン再開
   if(byoyomiMode){
     stopCountdown();
-    if(T==="sente") timerSente = BYOYOMI_SEC;
-    else timerGote = BYOYOMI_SEC;
+    if(gameMode === "5sochi"){
+      // 5秒落ち: 手前(sente)=5秒、奥(gote)=10秒
+      if(T==="sente") timerSente = BYOYOMI_5S;
+      else timerGote = BYOYOMI_SEC;
+    } else {
+      if(T==="sente") timerSente = BYOYOMI_SEC;
+      else timerGote = BYOYOMI_SEC;
+    }
   }
 
   var nx=T==="sente"?"gote":"sente";T=nx;
@@ -2251,8 +2306,22 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     }
     document.getElementById("title-screen").style.display = "none";
     document.getElementById("game-screen").classList.add("show");
-    TIMER_TOTAL = selectedTime;
+
+    // 5秒落ちモード: 奥側10秒、手前側5秒の秒読み
+    if(gameMode === "5sochi"){
+      byoyomiMode = true;
+      selectedTime = BYOYOMI_SEC; // 11秒(奥側)
+      TIMER_TOTAL = BYOYOMI_SEC;
+    } else {
+      TIMER_TOTAL = selectedTime;
+    }
+
     init();
+
+    // 5秒落ち: 手前側(sente)のタイマーを5秒に上書き
+    if(gameMode === "5sochi"){
+      timerSente = BYOYOMI_5S;
+    }
     render();
 
     unlockAudio(function(){
@@ -2414,6 +2483,25 @@ for(var i=0; i<timeBtns.length; i++){
     this.classList.add("selected");
     selectedTime = parseInt(this.getAttribute("data-time"));
     byoyomiMode = this.hasAttribute("data-byoyomi");
+  });
+}
+
+/* 対局形式選択ボタン */
+var modeBtns = document.querySelectorAll(".mode-btn");
+var timeArea = document.getElementById("time-select-area");
+for(var i=0; i<modeBtns.length; i++){
+  modeBtns[i].addEventListener("click", function(){
+    unlockAudio(null);
+    playButtonSound();
+    for(var j=0; j<modeBtns.length; j++) modeBtns[j].classList.remove("selected");
+    this.classList.add("selected");
+    gameMode = this.getAttribute("data-mode");
+    // 5秒落ちのときは持ち時間選択を隠す
+    if(gameMode === "5sochi"){
+      timeArea.style.display = "none";
+    } else {
+      timeArea.style.display = "";
+    }
   });
 }
 
