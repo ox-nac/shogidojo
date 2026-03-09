@@ -525,6 +525,43 @@ table.board td.cap::after {
   100% { transform: translateX(110vw) scale(0.8) rotate(180deg); }
 }
 
+/* 終盤デュアル動画オーバーレイ */
+.video-overlay-dual .dual-video-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.dual-video-top, .dual-video-bottom {
+  max-width: 75vw;
+  max-height: 32vh;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 15px rgba(200,80,50,0.2);
+  border: 2px solid rgba(200,80,50,0.3);
+}
+.dual-video-top video, .dual-video-bottom video {
+  width: 100%;
+  display: block;
+}
+.dual-video-top {
+  transform: rotate(180deg);
+}
+
+/* カットインアニメーション（デュアル） */
+.video-overlay-dual.cutin .dual-video-top {
+  animation: cutinSlideGote 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.video-overlay-dual.cutin .dual-video-bottom {
+  animation: cutinSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.video-overlay-dual.cutout .dual-video-top {
+  animation: cutoutSlideGote 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+.video-overlay-dual.cutout .dual-video-bottom {
+  animation: cutoutSlide 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
 .warning-toast {
   position: fixed;
   top: 50%;
@@ -985,6 +1022,18 @@ body { padding: 8px 4px; }
   <video id="video-5no5-player" src="5no5.mp4" playsinline webkit-playsinline preload="auto" muted></video>
 </div>
 
+<!-- 終盤カットイン（上下2つ） -->
+<div class="video-overlay video-overlay-dual" id="video-endgame">
+  <div class="dual-video-wrap">
+    <div class="dual-video-top">
+      <video id="endgame-video-top" src="endgame.mp4" playsinline webkit-playsinline preload="auto" muted></video>
+    </div>
+    <div class="dual-video-bottom">
+      <video id="endgame-video-bottom" src="endgame.mp4" playsinline webkit-playsinline preload="auto" muted></video>
+    </div>
+  </div>
+</div>
+
 <!-- 音声はWeb Audio APIで管理 -->
 
 <script>
@@ -1032,7 +1081,8 @@ var soundFiles = {
   bgm: "bgm.mp3",
   start: "start.mp3",
   cutin: "cutin.mp3",
-  button: "button.mp3"
+  button: "button.mp3",
+  endgame_bgm: "endgame_bgm.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -1138,6 +1188,40 @@ function muteBGM(){
 }
 function unmuteBGM(){
   if(bgmGain) bgmGain.gain.value = 0.12;
+}
+
+/* 終盤BGM */
+var endgameBgmSource = null;
+var endgameBgmGain = null;
+var endgameBgmStarted = false;
+var endgameCutinDone = false;
+
+function startEndgameBGM(){
+  if(!audioCtx || !audioBuffers.endgame_bgm || endgameBgmStarted) return;
+  if(typeof bgmEnabled !== "undefined" && !bgmEnabled) return;
+  endgameBgmSource = audioCtx.createBufferSource();
+  endgameBgmSource.buffer = audioBuffers.endgame_bgm;
+  endgameBgmSource.loop = true;
+  endgameBgmGain = audioCtx.createGain();
+  endgameBgmGain.gain.value = 0.25;
+  endgameBgmSource.connect(endgameBgmGain);
+  endgameBgmGain.connect(audioCtx.destination);
+  endgameBgmSource.start(0);
+  endgameBgmStarted = true;
+}
+function stopEndgameBGM(){
+  if(endgameBgmSource){
+    try{ endgameBgmSource.stop(); }catch(e){}
+    endgameBgmSource = null;
+    endgameBgmGain = null;
+  }
+  endgameBgmStarted = false;
+}
+function muteEndgameBGM(){
+  if(endgameBgmGain) endgameBgmGain.gain.value = 0;
+}
+function unmuteEndgameBGM(){
+  if(endgameBgmGain) endgameBgmGain.gain.value = 0.25;
 }
 
 // 動画
@@ -1279,6 +1363,8 @@ function init(){
   if(rb) rb.classList.remove("show");
   var rbg=document.getElementById("review-bar-gote");
   if(rbg) rbg.classList.remove("show");
+  stopEndgameBGM();
+  endgameCutinDone = false;
 }
 
 /* タイマー */
@@ -1323,6 +1409,12 @@ function startTimer(){
     }
     renderTimers();
     if(over) renderBanners();
+
+    // 両者3分切りチェック
+    if(!endgameCutinDone && timerSente<=180 && timerGote<=180){
+      endgameCutinDone = true;
+      playEndgameCutin();
+    }
   }, 1000);
 }
 
@@ -1607,8 +1699,64 @@ function play5no5Cutin(mover, callback){
 function cleanup5no5(callback){
   $vid5Ov.classList.remove("show","cutin","cutout","gote-winner");
   cutinActive = false;
-  if(bgmEnabled) unmuteBGM();
+  if(endgameBgmStarted){
+    if(bgmEnabled) unmuteEndgameBGM();
+  } else {
+    if(bgmEnabled) unmuteBGM();
+  }
   if(callback) callback();
+}
+
+/* ===== 終盤カットイン（両者3分切り）===== */
+var $vidEndOv = document.getElementById("video-endgame");
+var $vidEndTop = document.getElementById("endgame-video-top");
+var $vidEndBot = document.getElementById("endgame-video-bottom");
+
+function playEndgameCutin(){
+  $vidEndOv.classList.remove("cutin","cutout");
+  $vidEndOv.classList.add("show","cutin");
+  playSound("cutin", 1.5);
+
+  // 通常BGMをミュート
+  muteBGM();
+
+  // 両方の動画をミュートで準備
+  $vidEndTop.muted = true;
+  $vidEndBot.muted = true;
+  $vidEndTop.currentTime = 0;
+  $vidEndBot.currentTime = 0;
+  $vidEndTop.play().catch(function(){});
+  $vidEndTop.pause();
+  $vidEndBot.play().catch(function(){});
+  $vidEndBot.pause();
+
+  // カットイン後に動画再生（下側だけ音声ON）
+  setTimeout(function(){
+    $vidEndBot.muted = false;
+    $vidEndBot.volume = 1;
+    $vidEndTop.currentTime = 0;
+    $vidEndBot.currentTime = 0;
+    $vidEndTop.play().catch(function(){});
+    $vidEndBot.play().catch(function(){});
+  }, 600);
+
+  // 動画終了 → カットアウト → 終盤BGM開始
+  $vidEndBot.onended = function(){
+    $vidEndOv.classList.remove("cutin");
+    $vidEndOv.classList.add("cutout");
+    setTimeout(function(){
+      $vidEndOv.classList.remove("show","cutin","cutout");
+      // 通常BGM完全停止 → 終盤BGM開始
+      stopBGM();
+      startEndgameBGM();
+    }, 450);
+  };
+
+  $vidEndBot.onerror = function(){
+    $vidEndOv.classList.remove("show","cutin","cutout");
+    stopBGM();
+    startEndgameBGM();
+  };
 }
 
 function endT(){
@@ -1660,6 +1808,7 @@ var $winText=document.getElementById("win-text");
 
 function showWinDialog(winner){
   stopBGM();
+  stopEndgameBGM();
   $winText.textContent="あなたの勝ちです";
   // 勝者が画面上部（奥側）にいるなら逆さまに表示
   var winnerIsTop;
@@ -1997,6 +2146,7 @@ document.getElementById("bgm-toggle").addEventListener("click", function(){
   if(bgmEnabled){
     // OFFにする（ミュート、再生は続く）
     muteBGM();
+    muteEndgameBGM();
     bgmEnabled = false;
     btn.classList.remove("on");
     btn.classList.add("off");
@@ -2005,7 +2155,9 @@ document.getElementById("bgm-toggle").addEventListener("click", function(){
     bgmEnabled = true;
     btn.classList.remove("off");
     btn.classList.add("on");
-    if(bgmStarted){
+    if(endgameBgmStarted){
+      unmuteEndgameBGM();
+    } else if(bgmStarted){
       unmuteBGM();
     } else if(!over && !reviewMode){
       startBGM();
