@@ -122,7 +122,7 @@ body {
 /* ===== 五角形駒（参考画像準拠） ===== */
 .koma {
   position: absolute;
-  top: 50%;
+  top: 46%;
   left: 50%;
   width: 42px;
   height: 48px;
@@ -1379,7 +1379,7 @@ function startTimer(){
   if(over) return;
   startBGM();
   timerInterval=setInterval(function(){
-    if(over||prm) return;
+    if(over||prm||cutinActive) return;
     if(T==="sente"){
       timerSente--;
       if(timerSente<=0){
@@ -1713,6 +1713,7 @@ var $vidEndTop = document.getElementById("endgame-video-top");
 var $vidEndBot = document.getElementById("endgame-video-bottom");
 
 function playEndgameCutin(){
+  cutinActive = true;
   $vidEndOv.classList.remove("cutin","cutout");
   $vidEndOv.classList.add("show","cutin");
   playSound("cutin", 1.5);
@@ -1746,6 +1747,7 @@ function playEndgameCutin(){
     $vidEndOv.classList.add("cutout");
     setTimeout(function(){
       $vidEndOv.classList.remove("show","cutin","cutout");
+      cutinActive = false;
       // 通常BGM完全停止 → 終盤BGM開始
       stopBGM();
       startEndgameBGM();
@@ -1754,6 +1756,7 @@ function playEndgameCutin(){
 
   $vidEndBot.onerror = function(){
     $vidEndOv.classList.remove("show","cutin","cutout");
+    cutinActive = false;
     stopBGM();
     startEndgameBGM();
   };
@@ -2066,6 +2069,7 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     unlockAudio(function(){
       playStartSound();
       startBGM();
+      startTimer(); // 対局開始と同時にタイマースタート
     });
     return;
   }
