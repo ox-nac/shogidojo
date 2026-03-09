@@ -856,6 +856,48 @@ body { padding: 8px 4px; }
 .furi-btn:hover { background: linear-gradient(135deg, #8B5E3C, #a06e48); transform: translateY(-1px); }
 .furi-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 
+/* 持ち時間選択 */
+.time-select-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.time-select-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #c4a875;
+  letter-spacing: 3px;
+}
+.time-select-btns {
+  display: flex;
+  gap: 12px;
+}
+.time-btn {
+  padding: 10px 28px;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Yu Mincho", "Hiragino Mincho Pro", "MS Mincho", serif;
+  background: rgba(80,50,25,0.5);
+  color: #e8d5b0;
+  border: 2px solid rgba(139,115,85,0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+.time-btn:hover { background: rgba(100,65,30,0.7); }
+.time-btn.selected {
+  background: linear-gradient(135deg, #8B5E3C, #a06e48);
+  border-color: #c49a4a;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+/* iPad用 */
+.time-select-title { font-size: 24px !important; letter-spacing: 5px !important; }
+.time-btn { font-size: 26px !important; padding: 14px 40px !important; }
+
 /* ゲーム画面は最初非表示 */
 .game-screen { display: none; position: relative; }
 .game-screen.show { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
@@ -908,6 +950,16 @@ body { padding: 8px 4px; }
     <div class="name-row">
       <span class="name-label">奥側</span>
       <input class="name-input" id="name2" type="text" placeholder="名前を入力" maxlength="10">
+    </div>
+  </div>
+
+  <!-- 持ち時間選択 -->
+  <div class="time-select-area">
+    <div class="time-select-title">持ち時間</div>
+    <div class="time-select-btns">
+      <button class="time-btn" data-time="180">3分</button>
+      <button class="time-btn" data-time="300">5分</button>
+      <button class="time-btn selected" data-time="600">10分</button>
     </div>
   </div>
 
@@ -1080,7 +1132,8 @@ var INIT=[
   ["L","N","S","G","K","G","S","N","L"]
 ];
 
-var TIMER_TOTAL = 10 * 60; // 10分（秒）
+var TIMER_TOTAL = 600; // デフォルト10分、タイトル画面で変更可能
+var selectedTime = 600;
 
 /* ===== Web Audio API サウンドシステム ===== */
 var audioCtx = null;
@@ -2203,13 +2256,44 @@ document.getElementById("furi-btn").addEventListener("click", function(){
     }
     document.getElementById("title-screen").style.display = "none";
     document.getElementById("game-screen").classList.add("show");
+    TIMER_TOTAL = selectedTime;
     init();
     render();
 
     unlockAudio(function(){
       playStartSound();
-      startBGM();
-      startTimer(); // 対局開始と同時にタイマースタート
+
+      if(selectedTime <= 180){
+        // 3分: カットイン演出→残り3分音声→終盤BGMでスタート
+        // フラグを先にセット（init後なのでリセットされている）
+        sente5minWarned = true;
+        gote5minWarned = true;
+        sente3minWarned = true;
+        gote3minWarned = true;
+        endgameCutinDone = true;
+        setTimeout(function(){
+          playEndgameCutin();
+          // カットイン終了後の処理はplayEndgameCutin内で行われる
+          // （3分警告→終盤BGM→タイマー開始）
+          // pending3minWarningをセットしてカットイン後に再生させる
+          pending3minWarning = true;
+        }, 500);
+        // タイマーはカットイン終了後に開始（cutinActive中はタイマー停止するので先に開始してOK）
+        startTimer();
+
+      } else if(selectedTime <= 300){
+        // 5分: 残り5分音声→通常BGMでスタート
+        sente5minWarned = true;
+        gote5minWarned = true;
+        startBGM();
+        startTimer();
+        setTimeout(function(){ playNokori5(); }, 800);
+
+      } else {
+        // 10分: 通常通り
+        startBGM();
+        startTimer();
+      }
     });
     return;
   }
@@ -2308,6 +2392,17 @@ document.getElementById("bgm-toggle").addEventListener("click", function(){
     }
   }
 });
+
+/* 持ち時間選択ボタン */
+var timeBtns = document.querySelectorAll(".time-btn");
+for(var i=0; i<timeBtns.length; i++){
+  timeBtns[i].addEventListener("click", function(){
+    playButtonSound();
+    for(var j=0; j<timeBtns.length; j++) timeBtns[j].classList.remove("selected");
+    this.classList.add("selected");
+    selectedTime = parseInt(this.getAttribute("data-time"));
+  });
+}
 
 })();
 </script>
