@@ -447,6 +447,24 @@ table.board td.cap::after {
 .review-mode .resign-btn { display: none; }
 .review-mode .timer-box { opacity: 0.3; }
 
+/* 投了動画カットイン */
+.video-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+}
+.video-overlay.show { display: flex; }
+.video-overlay video {
+  max-width: 85vw;
+  max-height: 70vh;
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+
 .warning-toast {
   position: fixed;
   top: 50%;
@@ -863,6 +881,11 @@ body { padding: 12px 8px; }
 </div>
 
 </div><!-- /game-screen -->
+
+<!-- 投了動画カットイン -->
+<div class="video-overlay" id="video-ov">
+  <video id="touryou-video" src="touryou.mp4" playsinline webkit-playsinline></video>
+</div>
 
 <script>
 (function(){
@@ -1482,9 +1505,26 @@ function doResign(who){
   var winnerName = winner==="sente" ? document.getElementById("si").textContent.replace("☗ ","") : document.getElementById("gi").textContent.replace("☖ ","");
   over = winnerName + " の勝ち";
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
-
+  stopBGM();
   render();
-  showWinDialog(winner);
+
+  // 動画カットイン再生
+  var $vidOv = document.getElementById("video-ov");
+  var $vid = document.getElementById("touryou-video");
+  $vidOv.classList.add("show");
+  $vid.currentTime = 0;
+  $vid.play().catch(function(){});
+
+  // 動画終了後にダイアログ表示
+  $vid.onended = function(){
+    $vidOv.classList.remove("show");
+    showWinDialog(winner);
+  };
+  // 動画が読み込めなかった場合のフォールバック
+  $vid.onerror = function(){
+    $vidOv.classList.remove("show");
+    showWinDialog(winner);
+  };
 }
 document.getElementById("resign-sente").addEventListener("click",function(){ doResign("sente"); });
 document.getElementById("resign-gote").addEventListener("click",function(){ doResign("gote"); });
