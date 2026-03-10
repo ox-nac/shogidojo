@@ -1186,7 +1186,8 @@ var soundFiles = {
   nokori3: "nokori3.mp3",
   nokori1: "nokori1.mp3",
   countdown: "countdown.mp3",
-  countdown5: "countdown5.mp3"
+  countdown5: "countdown5.mp3",
+  hyoshigi: "hyoshigi.mp3"
 };
 
 // 音声ファイルを読み込み＆デコード
@@ -2417,6 +2418,7 @@ document.getElementById("furi-btn").addEventListener("click", function(){
           // 最後の駒が着地したら結果表示
           if(idx === 4){
             setTimeout(function(){
+              playSound("hyoshigi", 2.0);
               var name1 = document.getElementById("name1").value.trim() || "手前側";
               var name2 = document.getElementById("name2").value.trim() || "奥側";
               var resultEl = document.getElementById("furi-result");
